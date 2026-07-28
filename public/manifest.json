@@ -1,21 +1,20 @@
 {
-  "name": "PHP Lotto",
-  "short_name": "Lotto",
+  "name": "PHPLotto App",
+  "short_name": "PHPLotto",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#000000",
+  "background_color": "#030712",
+  "theme_color": "#1e3a8a",
   "icons": [
     {
-      "src": "my_logo.png",
+      "src": "/my_logo.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "my_logo.png",
+      "src": "/my_logo.png",
       "sizes": "512x512",
       "type": "image/png"
     }
   ]
 }
-
