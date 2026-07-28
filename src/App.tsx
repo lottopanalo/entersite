@@ -26,7 +26,7 @@ export default function App() {
 
 // 🎯 主站與備用 API 清單（與你的 sw.js 保持一致）
   const TARGET_DOMAINS = [
-    'https://phplotto.ph',
+    'https://phplotto-block.ph',
     'https://phplotto.net',
     'https://phplottos.com',
     'https://phplotto.com'
