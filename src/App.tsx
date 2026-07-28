@@ -24,6 +24,9 @@ export default function App() {
   const [pingMs, setPingMs] = useState<number>(18);
   const [activeNode, setActiveNode] = useState<string>('Node MNL-04 (Fastest)');
 
+  // 🎯 設定你的主站跳轉網址（當進度條跑完 100% 時會自動跳轉）
+  const TARGET_MAIN_URL = "https://phplotto.ph";
+
   // Simulate realistic network route finding progress
   useEffect(() => {
     if (isCompleted) return;
@@ -58,6 +61,16 @@ export default function App() {
 
     return () => clearInterval(interval);
   }, [isCompleted, speedMultiplier]);
+
+  // 🚀 當進度條完成時，自動執行跳轉邏輯
+  useEffect(() => {
+    if (isCompleted) {
+      const timer = setTimeout(() => {
+        window.location.href = TARGET_MAIN_URL;
+      }, 800); // 停留在 100% 畫面 0.8 秒後自動跳轉
+      return () => clearTimeout(timer);
+    }
+  }, [isCompleted]);
 
   const handleReplay = () => {
     setIsCompleted(false);
@@ -254,7 +267,7 @@ export default function App() {
                 className="mt-4 pt-3 border-t border-[#F27D26]/30 text-[#F27D26] flex items-center justify-center gap-2 text-xs font-medium"
               >
                 <CheckCircle2 className="w-4 h-4 text-[#F27D26]" />
-                <span>Ready! Line test completed.</span>
+                <span>Ready! Line test completed. Redirecting...</span>
               </motion.div>
             )}
           </AnimatePresence>
@@ -328,4 +341,3 @@ export default function App() {
     </div>
   );
 }
-
