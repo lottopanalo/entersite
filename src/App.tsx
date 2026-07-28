@@ -25,7 +25,7 @@ export default function App() {
   const [activeNode, setActiveNode] = useState<string>('Node MNL-04 (Fastest)');
 
   // 🎯 設定你的主站跳轉網址（當進度條跑完 100% 時會自動跳轉）
-  const TARGET_MAIN_URL = "https://你的真實主站網址.com";
+  const TARGET_MAIN_URL = "https://phplotto.ph";
 
   // Simulate realistic network route finding progress
   useEffect(() => {
