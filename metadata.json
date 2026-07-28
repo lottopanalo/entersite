@@ -1,0 +1,6 @@
+{
+  "name": "Loading Screen",
+  "description": "Single-page elegant loading screen featuring a logo, loading progress bar, and warm status tips in Tagalog and English.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
