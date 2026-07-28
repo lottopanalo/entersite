@@ -24,8 +24,49 @@ export default function App() {
   const [pingMs, setPingMs] = useState<number>(18);
   const [activeNode, setActiveNode] = useState<string>('Node MNL-04 (Fastest)');
 
-  // 🎯 設定你的主站跳轉網址（當進度條跑完 100% 時會自動跳轉）
-  const TARGET_MAIN_URL = "https://phplotto.ph";
+// 🎯 主站與備用 API 清單（與你的 sw.js 保持一致）
+  const TARGET_DOMAINS = [
+    'https://phplotto.ph',
+    'https://phplotto.net',
+    'https://phplottos.com',
+    'https://phplotto.com'
+  ];
+
+  // 🚀 當進度條完成時，自動測試網域並跳轉到第一個健康的網址
+  useEffect(() => {
+    if (isCompleted) {
+      const timer = setTimeout(async () => {
+        let targetUrl = TARGET_DOMAINS[0]; // 預設先用主站
+
+        // 依序測試清單中的網址，確保能通才跳轉
+        for (const domain of TARGET_DOMAINS) {
+          try {
+            // 使用無害的 HEAD 請求或 mode: 'no-cors' 快速檢測該網域是否存活
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 2500);
+            
+            await fetch(domain, { 
+              method: 'HEAD', 
+              mode: 'no-cors',
+              signal: controller.signal 
+            });
+            
+            clearTimeout(timeoutId);
+            targetUrl = domain;
+            console.log(`[App] 探測成功，選擇可用網域: ${domain}`);
+            break; // 找到第一個通的就直接使用
+          } catch (e) {
+            console.warn(`[App] 網域連線測試失敗，嘗試下一個: ${domain}`);
+          }
+        }
+
+        // 執行最終跳轉
+        window.location.href = targetUrl;
+      }, 800); // 停留在 100% 畫面 0.8 秒
+
+      return () => clearTimeout(timer);
+    }
+  }, [isCompleted]);
 
   // Simulate realistic network route finding progress
   useEffect(() => {
