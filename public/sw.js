@@ -1,28 +1,25 @@
 // ===========================================
-// 系統環境與變數設定
-// 這些變數方便您後續修改
+// 1. 引入 OneSignal 專屬的 Service Worker 邏輯
 // ===========================================
+importScripts('https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js');
 
-// 主 API 網域 (當前最佳選擇)
+// ===========================================
+// 2. 系統環境與變數設定 (API 自動備援機制)
+// ===========================================
 let PRIMARY_API = 'https://phplotto.ph';
 
-// 備用 API 網域清單
 let FALLBACK_APIS = [
     'https://phplotto.net',
     'https://phplottos.com',
     'https://phplotto.com'
 ];
 
-// 發牌中心 (Dispatcher) 的靜態 JSON 網址，用於動態更新 API 清單
 const DISPATCHER_URL = 'https://raw.githubusercontent.com/lottopanalo/entersite/main/config.json';
-
-// 每個 API 請求的超時時間，設定為 3000 毫秒 (3秒)
 const REQUEST_TIMEOUT = 3000;
 
 // ===========================================
-// 輔助函式：加上超時機制的 Fetch 請求
+// 3. 輔助函式：帶有超時機制的 Fetch 請求
 // ===========================================
-
 async function fetchWithTimeout(request, timeout) {
     const controller = new AbortController();
     const signal = controller.signal;
@@ -44,9 +41,8 @@ async function fetchWithTimeout(request, timeout) {
 }
 
 // ===========================================
-// 核心邏輯函式
+// 4. API 容錯與備援邏輯
 // ===========================================
-
 async function tryPrimaryApi(originalRequest) {
     try {
         const requestToUse = originalRequest.clone();
@@ -152,9 +148,8 @@ async function fetchAndBackup(originalRequest) {
 }
 
 // ===========================================
-// Service Worker 事件監聽
+// 5. Service Worker 核心事件監聽
 // ===========================================
-
 self.addEventListener('fetch', (event) => {
     if (!event.request.url.startsWith('http')) {
         return;
@@ -167,60 +162,20 @@ self.addEventListener('fetch', (event) => {
         console.log(`[Service Worker] 攔截到 API 請求: ${event.request.url}`);
         event.respondWith(fetchAndBackup(event.request));
     } else {
+        // 非 API 請求交由預設快取或網路處理
         event.respondWith(fetch(event.request));
     }
 });
 
 self.addEventListener('install', (event) => {
     self.skipWaiting();
-    console.log('[Service Worker] 已安裝。');
+    console.log('[Service Worker] 安裝成功。');
 });
 
 self.addEventListener('activate', (event) => {
     event.waitUntil(clients.claim());
-    console.log('[Service Worker] 已啟用。');
+    console.log('[Service Worker] 已啟用並掌控頁面。');
 });
+```eof
 
-// ===========================================
-// 推播通知 (Push Notifications) 相關事件監聽
-// ===========================================
-
-self.addEventListener('push', function (event) {
-    const data = event.data ? event.data.json() : {};
-    const title = data.title || 'PHPLotto Notification';
-    const options = {
-        body: data.body || 'May bago kang update mula sa PHPLotto!',
-        icon: '/assets/images/my_logo.png',
-        badge: '/assets/images/my_logo.png',
-        data: {
-            url: data.url || PRIMARY_API
-        }
-    };
-
-    event.waitUntil(
-        self.registration.showNotification(title, options)
-    );
-});
-
-self.addEventListener('notificationclick', function (event) {
-    event.notification.close();
-    const targetUrl = event.notification.data?.url || PRIMARY_API;
-
-    event.waitUntil(
-        clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function (clientList) {
-            for (let i = 0; i < clientList.length; i++) {
-                const client = clientList[i];
-                if ('focus' in client) {
-                    client.focus();
-                    if ('navigate' in client) {
-                        return client.navigate(targetUrl);
-                    }
-                    return;
-                }
-            }
-            if (clients.openWindow) {
-                return clients.openWindow(targetUrl);
-            }
-        })
-    );
-});
+Your updated `sw.js` file is ready! Feel free to take a look and let me know if you'd like to make any edits.
