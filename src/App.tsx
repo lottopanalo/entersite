@@ -94,10 +94,10 @@ export default function App() {
   // 🔔 透過 OneSignal 請求推播通知權限
   const handleSubscribePush = async () => {
     try {
-      // 彈出 OneSignal 內建的權限請求視窗
-      await OneSignal.Slidedefault?.optIn() || OneSignal.User.PushSubscription.optIn();
+      // 確保使用正確的 lowercase pushSubscription
+      await OneSignal.User.pushSubscription.optIn();
       setIsSubscribed(true);
-      alert('🎉 Push notifications enabled successfully!\nMaganda! Nakatanggap ka na ng mga abiso.');
+      alert('🎉 Push notifications enabled successfully!');
     } catch (error) {
       console.error('[OneSignal] 訂閱失敗:', error);
       alert('Notification permission was denied or failed. You can enable it in your browser settings.');
