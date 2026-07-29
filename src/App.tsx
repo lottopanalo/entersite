@@ -13,6 +13,9 @@ import {
   Bell
 } from 'lucide-react';
 
+// 引入 OneSignal 推播 SDK
+import OneSignal from 'react-onesignal';
+
 // Imported generated logo asset
 import logoImg from './assets/images/my_logo.png';
 
@@ -41,7 +44,7 @@ export default function App() {
     'https://phplotto.com'
   ];
 
-  // 📥 監聽瀏覽器的 PWA 安裝事件與 Service Worker 註冊
+  // 📥 監聽瀏覽器的 PWA 安裝事件、Service Worker 註冊與 OneSignal 初始化
   useEffect(() => {
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
@@ -59,6 +62,20 @@ export default function App() {
         .catch((err) => console.error('[PWA] Service Worker 註冊失敗:', err));
     }
 
+    // 🔔 初始化 OneSignal 推播
+    OneSignal.init({
+      appId: "4df189d3-17e8-4314-8ee3-38791652df11",
+      notifyButton: { enable: true },
+    }).then(() => {
+      console.log('[OneSignal] 初始化成功！');
+      // 檢查使用者是否已經訂閱過
+      OneSignal.User.PushSubscription.optedIn.then((optedIn) => {
+        if (optedIn) setIsSubscribed(true);
+      });
+    }).catch((err) => {
+      console.error('[OneSignal] 初始化失敗:', err);
+    });
+
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     };
@@ -74,26 +91,16 @@ export default function App() {
     setShowInstallBtn(false);
   };
 
-  // 🔔 請求推播通知權限
+  // 🔔 透過 OneSignal 請求推播通知權限
   const handleSubscribePush = async () => {
-    if (!('Notification' in window)) {
-      alert('Your browser does not support push notifications.');
-      return;
-    }
-
-    const permission = await Notification.requestPermission();
-    if (permission === 'granted') {
+    try {
+      // 彈出 OneSignal 內建的權限請求視窗
+      await OneSignal.Slidedefault?.optIn() || OneSignal.User.PushSubscription.optIn();
       setIsSubscribed(true);
       alert('🎉 Push notifications enabled successfully!\nMaganda! Nakatanggap ka na ng mga abiso.');
-      
-      // 這裡未來可以向你的後端發送請求，將使用者的 PushSubscription 儲存起來
-      if ('serviceWorker' in navigator) {
-        const registration = await navigator.serviceWorker.ready;
-        // 範例：若有實作 VAPID 推播，可在此處建立 subscription
-        console.log('Notification permission granted:', registration);
-      }
-    } else {
-      alert('Notification permission was denied. You can enable it in your browser settings.');
+    } catch (error) {
+      console.error('[OneSignal] 訂閱失敗:', error);
+      alert('Notification permission was denied or failed. You can enable it in your browser settings.');
     }
   };
 
@@ -320,7 +327,7 @@ export default function App() {
                 </div>
                 <h3 className="text-[14px] font-normal text-blue-200/90 uppercase tracking-[0.15em] leading-relaxed">
                   "Searching for the fastest line for you..."
-                </h3>
+              </h3>
                 <p className="text-xs text-blue-200/60">
                   {statusSub.en}
                 </p>
