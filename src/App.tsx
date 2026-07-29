@@ -10,7 +10,8 @@ import {
   ShieldCheck, 
   SignalHigh,
   Download,
-  Bell
+  Bell,
+  X
 } from 'lucide-react';
 
 // 引入 OneSignal 推播 SDK
@@ -28,6 +29,11 @@ export default function App() {
   const [speedMultiplier, setSpeedMultiplier] = useState<number>(1);
   const [pingMs, setPingMs] = useState<number>(18);
   const [activeNode, setActiveNode] = useState<string>('Node MNL-04 (Fastest)');
+
+  // 🌟 新增：控制訂閱視窗（Modal）是否顯示，預設進站就顯示 (true)
+  const [showModal, setShowModal] = useState<boolean>(true);
+  // 🌟 新增：記錄視窗是否已經被關閉過，用來觸發後續的進度條
+  const [hasStartedLoading, setHasStartedLoading] = useState<boolean>(false);
 
   // PWA 安裝提示相關狀態
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
@@ -92,19 +98,17 @@ export default function App() {
     };
   }, []);
 
-// 🔔 透過 OneSignal 請求推播通知權限
+  // 🔔 透過 OneSignal 請求推播通知權限
   const handleSubscribePush = async () => {
     try {
       console.log('[OneSignal] 正在嘗試請求訂閱...');
       
-      // 使用更安全的全域物件觸發權限視窗
       const OneSignalW = (window as any).OneSignal;
       if (OneSignalW && OneSignalW.Slidedown) {
         await OneSignalW.Slidedown.promptPush();
       } else if (OneSignalW && OneSignalW.User) {
         await OneSignalW.User.pushSubscription.optIn();
       } else {
-        // 備用方案：直接呼叫相容方法
         await OneSignal.User.pushSubscription.optIn();
       }
 
@@ -128,6 +132,12 @@ export default function App() {
       setDeferredPrompt(null);
       setShowInstallBtn(false);
     }
+  };
+
+  // ❌ 關閉視窗並開始跑進度條與跳轉
+  const handleCloseModal = () => {
+    setShowModal(false);
+    setHasStartedLoading(true); // 觸發下方進度條開始
   };
 
   // 🚀 當進度條完成時，自動測試網域並跳轉
@@ -156,15 +166,15 @@ export default function App() {
         }
 
         window.location.href = targetUrl;
-      }, 3000);
+      }, 1200);
 
       return () => clearTimeout(timer);
     }
   }, [isCompleted]);
 
-  // Simulate realistic network route finding progress
+  // Simulate realistic network route finding progress (只有當 hasStartedLoading 為 true 時才開始跑)
   useEffect(() => {
-    if (isCompleted) return;
+    if (!hasStartedLoading || isCompleted) return;
 
     const interval = setInterval(() => {
       setProgress((prev) => {
@@ -193,12 +203,13 @@ export default function App() {
     }, 180);
 
     return () => clearInterval(interval);
-  }, [isCompleted, speedMultiplier]);
+  }, [hasStartedLoading, isCompleted, speedMultiplier]);
 
   const handleReplay = () => {
     setIsCompleted(false);
     setProgress(0);
     setPingMs(16);
+    setHasStartedLoading(true); // 重新播放時也直接跑進度
   };
 
   const getSubStatusText = () => {
@@ -248,7 +259,104 @@ export default function App() {
         }}
       />
 
-      {/* Main Single-Page Centered Content Card */}
+      {/* 🌟 彈跳視窗 Modal (一進站預設顯示) */}
+      <AnimatePresence>
+        {showModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="relative w-full max-w-md bg-gradient-to-b from-gray-900/95 to-slate-950/95 border border-yellow-400/40 rounded-3xl p-6 shadow-[0_0_40px_rgba(250,204,21,0.2)] text-center space-y-4"
+            >
+              {/* ❌ 右上角叉叉關閉按鈕 */}
+              <button 
+                onClick={handleCloseModal}
+                className="absolute top-4 right-4 p-2 rounded-full bg-blue-950/80 border border-yellow-400/30 text-yellow-300 hover:bg-yellow-400 hover:text-blue-950 transition cursor-pointer shadow-md"
+                title="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              {/* 圖示與吸引人標題 */}
+              <div className="space-y-1 pt-2">
+                <div className="flex justify-center mb-2">
+                  <div className="p-3 bg-yellow-400/15 border border-yellow-400/40 rounded-2xl text-yellow-300">
+                    <Bell className="w-6 h-6 animate-bounce" />
+                  </div>
+                </div>
+                <h3 className="text-base sm:text-lg font-extrabold text-yellow-300 tracking-wide">
+                  🎉 Huwag palampasin ang mga bagong update at premyo!
+                </h3>
+                <p className="text-xs text-blue-200/80">
+                  Enable notifications & download the app for instant updates.<br />
+                  <span className="italic text-yellow-200/90 font-medium">I-on ang notifications at i-download ang app para sa mga huling balita.</span>
+                </p>
+              </div>
+
+              {/* 按鈕群組 */}
+              <div className="flex flex-col gap-3 pt-2">
+                
+                {/* 🔔 訂閱通知按鈕 */}
+                <button
+                  onClick={handleSubscribePush}
+                  className={`w-full flex items-center justify-center gap-2 py-3 px-4 rounded-2xl font-extrabold text-xs sm:text-sm shadow-lg transition-all cursor-pointer ${
+                    isSubscribed 
+                      ? 'bg-emerald-600 text-white border border-emerald-400' 
+                      : 'bg-gradient-to-r from-amber-500 to-yellow-400 text-blue-950 border border-white/40 hover:scale-[1.02] active:scale-95 shadow-[0_0_20px_rgba(250,204,21,0.4)]'
+                  }`}
+                >
+                  <Bell className="w-4 h-4 text-blue-950" />
+                  <span>{isSubscribed ? '✅ Notifications Enabled' : '🚀 Enable Notifications'}</span>
+                </button>
+
+                {/* 📥 下載/安裝 App 按鈕 */}
+                {showInstallBtn ? (
+                  <button
+                    onClick={handleInstallClick}
+                    className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-2xl font-extrabold text-xs sm:text-sm bg-gradient-to-r from-blue-600 to-indigo-600 text-white border border-white/30 hover:scale-[1.02] active:scale-95 shadow-lg transition-all cursor-pointer animate-pulse"
+                  >
+                    <Download className="w-4 h-4 text-white" />
+                    <span>📥 Install PHPLotto App</span>
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => {
+                      alert(
+                        "📲 PHPLotto App Installation Guide / Gabay sa Pag-install:\n\n" +
+                        "【iPhone / iPad (iOS Safari)】\n" +
+                        "1. Tap the 'Share' button at the bottom toolbar (📤).\n" +
+                        "   (I-tap ang 'Share' button sa ibaba)\n\n" +
+                        "2. Scroll down and tap 'Add to Home Screen' (➕).\n" +
+                        "   (I-scroll pababa at piliin ang 'Add to Home Screen')\n\n" +
+                        "3. Tap 'Add' at the top right to complete.\n" +
+                        "   (I-tap ang 'Add' sa kanang itaas)\n\n" +
+                        "【Android / Desktop】\n" +
+                        "Tap the browser menu (⋮) and select 'Install app' or 'Add to Home screen'."
+                      );
+                    }}
+                    className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-2xl font-bold text-xs sm:text-sm bg-blue-900/80 text-yellow-300 border border-yellow-400/50 hover:bg-blue-800 transition-all cursor-pointer shadow-lg"
+                  >
+                    <Download className="w-4 h-4 text-yellow-400" />
+                    <span>📲 How to Install App?</span>
+                  </button>
+                )}
+
+              </div>
+
+              {/* 關閉提示 */}
+              <button 
+                onClick={handleCloseModal}
+                className="text-[11px] text-blue-300/70 hover:text-white underline pt-1 cursor-pointer"
+              >
+                Patuloy sa site / Continue to site ➔
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Main Single-Page Centered Content Card (背景主畫面) */}
       <main className="relative z-10 w-full max-w-md flex flex-col items-center text-center py-8">
         
         {/* LOGO SECTION */}
@@ -422,80 +530,6 @@ export default function App() {
         </div>
 
       </main>
-
-     {/* 🔥 吸引人的 CTA 與顯眼按鈕區塊 (置中顯示 - 英文/塔加祿語版) */}
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="w-full bg-gradient-to-b from-blue-900/90 to-blue-950/90 border border-yellow-400/40 rounded-3xl p-6 backdrop-blur-xl shadow-[0_0_30px_rgba(250,204,21,0.15)] my-6 text-center space-y-4"
-        >
-          {/* 圖示與吸引人標題 (英文 + Tagalog) */}
-          <div className="space-y-1">
-            <div className="flex justify-center mb-2">
-              <div className="p-3 bg-yellow-400/15 border border-yellow-400/40 rounded-2xl text-yellow-300">
-                <Bell className="w-6 h-6 animate-bounce" />
-              </div>
-            </div>
-            <h3 className="text-base sm:text-lg font-extrabold text-yellow-300 tracking-wide">
-              🎉 Huwag palampasin ang mga bagong update at premyo!
-            </h3>
-            <p className="text-xs text-blue-200/80">
-              Enable notifications & download the app for instant updates.<br />
-              <span className="italic text-yellow-200/90 font-medium">I-on ang notifications at i-download ang app para sa mga huling balita.</span>
-            </p>
-          </div>
-
-          {/* 顯眼的大按鈕群組 (英文 + Tagalog 雙語) */}
-          <div className="flex flex-col sm:flex-row gap-3 pt-2">
-            
-            {/* 🔔 訂閱通知按鈕 */}
-            <button
-              onClick={handleSubscribePush}
-              className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-2xl font-extrabold text-xs sm:text-sm shadow-lg transition-all cursor-pointer ${
-                isSubscribed 
-                  ? 'bg-emerald-600 text-white border border-emerald-400' 
-                  : 'bg-gradient-to-r from-amber-500 to-yellow-400 text-blue-950 border border-white/40 hover:scale-[1.02] active:scale-95 shadow-[0_0_20px_rgba(250,204,21,0.4)]'
-              }`}
-            >
-              <Bell className="w-4 h-4 text-blue-950" />
-              <span>{isSubscribed ? '✅ Notifications Enabled' : '🚀 Enable Notifications'}</span>
-            </button>
-
-            {/* 📥 下載/安裝 App 按鈕 */}
-            {showInstallBtn ? (
-              <button
-                onClick={handleInstallClick}
-                className="flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-2xl font-extrabold text-xs sm:text-sm bg-gradient-to-r from-blue-600 to-indigo-600 text-white border border-white/30 hover:scale-[1.02] active:scale-95 shadow-lg transition-all cursor-pointer animate-pulse"
-              >
-                <Download className="w-4 h-4 text-white" />
-                <span>📥 Install PHPLotto App</span>
-              </button>
-            ) : (
-              <button
-                onClick={() => {
-                  alert(
-                    "📲 PHPLotto App Installation Guide / Gabay sa Pag-install:\n\n" +
-                    "【iPhone / iPad (iOS Safari)】\n" +
-                    "1. Tap the 'Share' button at the bottom toolbar (📤).\n" +
-                    "   (I-tap ang 'Share' button sa ibaba)\n\n" +
-                    "2. Scroll down and tap 'Add to Home Screen' (➕).\n" +
-                    "   (I-scroll pababa at piliin ang 'Add to Home Screen')\n\n" +
-                    "3. Tap 'Add' at the top right to complete.\n" +
-                    "   (I-tap ang 'Add' sa kanang itaas)\n\n" +
-                    "【Android / Desktop】\n" +
-                    "Tap the browser menu (⋮) and select 'Install app' or 'Add to Home screen'."
-                  );
-                }}
-                className="flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-2xl font-bold text-xs sm:text-sm bg-blue-900/80 text-yellow-300 border border-yellow-400/50 hover:bg-blue-800 transition-all cursor-pointer shadow-lg"
-              >
-                <Download className="w-4 h-4 text-yellow-400" />
-                <span>📲 How to Install App?</span>
-              </button>
-            )}
-
-          </div>
-        </motion.div>
 
     </div>
   );
