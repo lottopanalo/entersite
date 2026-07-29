@@ -373,7 +373,7 @@ export default function App() {
               className="flex items-center gap-2 bg-gradient-to-r from-yellow-400 to-amber-500 text-blue-950 font-extrabold px-5 py-3 rounded-2xl shadow-[0_0_25px_rgba(250,204,21,0.6)] hover:scale-105 active:scale-95 transition-all cursor-pointer border border-white/40 animate-bounce"
             >
               <Download className="w-5 h-5 text-blue-950" />
-              <span>安裝 PHPLotto App</span>
+              <span>NEW!!Download PHP Lotto App</span>
             </button>
           </motion.div>
         )}
