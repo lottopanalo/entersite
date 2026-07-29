@@ -62,51 +62,75 @@ export default function App() {
         .catch((err) => console.error('[PWA] Service Worker 註冊失敗:', err));
     }
 
-    // 🔔 初始化 OneSignal 推播
-    OneSignal.init({
-      appId: "4df189d3-17e8-4314-8ee3-38791652df11",
-      allowLocalhostAsSecureOrigin: true,
-    }).then(() => {
-      console.log('[OneSignal] 初始化成功！');
-      
-      // 檢查使用者是否已經訂閱過 (使用正確的小寫 pushSubscription)
-      const optedIn = OneSignal.User.pushSubscription.optedIn;
-      if (optedIn) {
-        setIsSubscribed(true);
-      }
-    }).catch((err) => {
-      console.error('[OneSignal] 初始化失敗:', err);
-    });
+    // 避免重複初始化 OneSignal
+    if (typeof window !== 'undefined' && !(window as any)._oneSignalInitialized) {
+      (window as any)._oneSignalInitialized = true;
+
+      OneSignal.init({
+        appId: "4df189d3-17e8-4314-8ee3-38791652df11",
+        allowLocalhostAsSecureOrigin: true,
+      }).then(async () => {
+        console.log('[OneSignal] 初始化成功！');
+        
+        try {
+          if (OneSignal.User && OneSignal.User.pushSubscription) {
+            const isOptedIn = OneSignal.User.pushSubscription.optedIn;
+            if (isOptedIn) {
+              setIsSubscribed(true);
+            }
+          }
+        } catch (e) {
+          console.log('尚未訂閱或狀態檢查中');
+        }
+      }).catch((err) => {
+        console.error('[OneSignal] 初始化失敗:', err);
+      });
+    }
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     };
   }, []);
 
-  // 手動觸發 PWA 安裝
-  const handleInstallClick = async () => {
-    if (!deferredPrompt) return;
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    console.log(`使用者安裝選擇: ${outcome}`);
-    setDeferredPrompt(null);
-    setShowInstallBtn(false);
-  };
-
-  // 🔔 透過 OneSignal 請求推播通知權限
+// 🔔 透過 OneSignal 請求推播通知權限
   const handleSubscribePush = async () => {
     try {
-      // 修正：使用正確的 pushSubscription.optIn() 語法
-      await OneSignal.User.pushSubscription.optIn();
+      console.log('[OneSignal] 正在嘗試請求訂閱...');
+      
+      // 使用更安全的全域物件觸發權限視窗
+      const OneSignalW = (window as any).OneSignal;
+      if (OneSignalW && OneSignalW.Slidedown) {
+        await OneSignalW.Slidedown.promptPush();
+      } else if (OneSignalW && OneSignalW.User) {
+        await OneSignalW.User.pushSubscription.optIn();
+      } else {
+        // 備用方案：直接呼叫相容方法
+        await OneSignal.User.pushSubscription.optIn();
+      }
+
       setIsSubscribed(true);
-      alert('🎉 Push notifications enabled successfully!\nMaganda! Nakatanggap ka na ng mga abiso.');
-    } catch (error) {
-      console.error('[OneSignal] 訂閱失敗:', error);
-      alert('Notification permission was denied or failed. You can enable it in your browser settings.');
+      alert('🎉 成功訂閱推播通知！\nPush notifications enabled successfully!');
+      
+    } catch (error: any) {
+      console.error('[OneSignal] 訂閱失敗詳情:', error);
+      alert(`訂閱失敗: ${error?.message || error}`);
     }
   };
 
-  // 🚀 當進度條完成時，自動測試網域並跳轉到第一個健康的網址
+  // 📲 處理 PWA 安裝按鈕點擊
+  const handleInstallClick = async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        console.log('使用者接受了安裝');
+      }
+      setDeferredPrompt(null);
+      setShowInstallBtn(false);
+    }
+  };
+
+  // 🚀 當進度條完成時，自動測試網域並跳轉
   useEffect(() => {
     if (isCompleted) {
       const timer = setTimeout(async () => {
