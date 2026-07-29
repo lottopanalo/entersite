@@ -65,13 +65,15 @@ export default function App() {
     // 🔔 初始化 OneSignal 推播
     OneSignal.init({
       appId: "4df189d3-17e8-4314-8ee3-38791652df11",
-      notifyButton: { enable: true },
+      allowLocalhostAsSecureOrigin: true,
     }).then(() => {
       console.log('[OneSignal] 初始化成功！');
-      // 檢查使用者是否已經訂閱過
-      OneSignal.User.PushSubscription.optedIn.then((optedIn) => {
-        if (optedIn) setIsSubscribed(true);
-      });
+      
+      // 檢查使用者是否已經訂閱過 (使用正確的小寫 pushSubscription)
+      const optedIn = OneSignal.User.pushSubscription.optedIn;
+      if (optedIn) {
+        setIsSubscribed(true);
+      }
     }).catch((err) => {
       console.error('[OneSignal] 初始化失敗:', err);
     });
@@ -94,10 +96,10 @@ export default function App() {
   // 🔔 透過 OneSignal 請求推播通知權限
   const handleSubscribePush = async () => {
     try {
-      // 確保使用正確的 lowercase pushSubscription
+      // 修正：使用正確的 pushSubscription.optIn() 語法
       await OneSignal.User.pushSubscription.optIn();
       setIsSubscribed(true);
-      alert('🎉 Push notifications enabled successfully!');
+      alert('🎉 Push notifications enabled successfully!\nMaganda! Nakatanggap ka na ng mga abiso.');
     } catch (error) {
       console.error('[OneSignal] 訂閱失敗:', error);
       alert('Notification permission was denied or failed. You can enable it in your browser settings.');
@@ -327,7 +329,7 @@ export default function App() {
                 </div>
                 <h3 className="text-[14px] font-normal text-blue-200/90 uppercase tracking-[0.15em] leading-relaxed">
                   "Searching for the fastest line for you..."
-              </h3>
+                </h3>
                 <p className="text-xs text-blue-200/60">
                   {statusSub.en}
                 </p>
