@@ -8,7 +8,8 @@ import {
   CheckCircle2, 
   Sparkles, 
   ShieldCheck, 
-  SignalHigh 
+  SignalHigh,
+  Download
 } from 'lucide-react';
 
 // Imported generated logo asset
@@ -24,13 +25,43 @@ export default function App() {
   const [pingMs, setPingMs] = useState<number>(18);
   const [activeNode, setActiveNode] = useState<string>('Node MNL-04 (Fastest)');
 
-// 🎯 主站與備用 API 清單（與你的 sw.js 保持一致）
+  // PWA 安裝提示相關狀態
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [showInstallBtn, setShowInstallBtn] = useState<boolean>(false);
+
+  // 🎯 主站與備用 API 清單
   const TARGET_DOMAINS = [
     'https://phplotto.ph',
     'https://phplotto.net',
     'https://phplottos.com',
     'https://phplotto.com'
   ];
+
+  // 📥 監聽瀏覽器的 PWA 安裝事件
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault(); // 阻止瀏覽器預設行為
+      setDeferredPrompt(e); // 儲存事件
+      setShowInstallBtn(true); // 顯示自訂安裝按鈕
+      console.log('[PWA] 已成功捕捉到安裝事件，按鈕已啟用');
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
+
+  // 手動觸發 PWA 安裝
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    console.log(`使用者安裝選擇: ${outcome}`);
+    setDeferredPrompt(null);
+    setShowInstallBtn(false);
+  };
 
   // 🚀 當進度條完成時，自動測試網域並跳轉到第一個健康的網址
   useEffect(() => {
@@ -41,7 +72,6 @@ export default function App() {
         // 依序測試清單中的網址，確保能通才跳轉
         for (const domain of TARGET_DOMAINS) {
           try {
-            // 使用無害的 HEAD 請求或 mode: 'no-cors' 快速檢測該網域是否存活
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 2500);
             
@@ -54,7 +84,7 @@ export default function App() {
             clearTimeout(timeoutId);
             targetUrl = domain;
             console.log(`[App] 探測成功，選擇可用網域: ${domain}`);
-            break; // 找到第一個通的就直接使用
+            break; 
           } catch (e) {
             console.warn(`[App] 網域連線測試失敗，嘗試下一個: ${domain}`);
           }
@@ -62,7 +92,7 @@ export default function App() {
 
         // 執行最終跳轉
         window.location.href = targetUrl;
-      }, 800); // 停留在 100% 畫面 0.8 秒
+      }, 1200); // 延長停留在 100% 的時間（1.2 秒），給予 PWA 安裝與緩衝時間
 
       return () => clearTimeout(timer);
     }
@@ -100,16 +130,6 @@ export default function App() {
 
     return () => clearInterval(interval);
   }, [isCompleted, speedMultiplier]);
-
-  // 🚀 當進度條完成時，自動執行跳轉邏輯
-  useEffect(() => {
-    if (isCompleted) {
-      const timer = setTimeout(() => {
-        window.location.href = TARGET_MAIN_URL;
-      }, 800);
-      return () => clearTimeout(timer);
-    }
-  }, [isCompleted]);
 
   const handleReplay = () => {
     setIsCompleted(false);
@@ -167,7 +187,7 @@ export default function App() {
       {/* Main Single-Page Centered Content Card */}
       <main className="relative z-10 w-full max-w-md flex flex-col items-center text-center py-8">
         
-        {/* LOGO SECTION (主站藍黃風格框線與發光) */}
+        {/* LOGO SECTION */}
         <div className="relative mb-12 group drop-shadow-[0_0_25px_rgba(255,215,0,0.3)]">
           <div className="absolute -inset-2 bg-gradient-to-r from-yellow-400 to-blue-500 rounded-3xl blur-md opacity-40 group-hover:opacity-70 transition duration-500 animate-pulse" />
           
@@ -228,7 +248,7 @@ export default function App() {
           </div>
         </div>
 
-        {/* WARM TIPS / STATUS MESSAGES (主站深藍色卡片與黃色點綴) */}
+        {/* STATUS MESSAGES */}
         <div className="w-full bg-blue-950/80 border border-blue-500/30 rounded-2xl p-6 backdrop-blur-md shadow-2xl relative overflow-hidden">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-[2px] bg-gradient-to-r from-transparent via-yellow-400 to-transparent" />
 
@@ -331,13 +351,34 @@ export default function App() {
 
         </div>
 
-        {/* Security / Quality Assurance Footer */}
+        {/* Security Footer */}
         <div className="mt-8 flex items-center justify-center gap-1.5 text-[10px] text-blue-300/60 uppercase tracking-[0.2em] font-medium">
           <ShieldCheck className="w-3.5 h-3.5 text-yellow-400" />
           <span>Secure Connection Established • 256-bit Node Verification</span>
         </div>
 
       </main>
+
+      {/* 🌟 浮動的 PWA 安裝按鈕（當瀏覽器觸發 beforeinstallprompt 時會自動顯示） */}
+      <AnimatePresence>
+        {showInstallBtn && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.9 }}
+            className="fixed bottom-6 right-6 z-50"
+          >
+            <button
+              onClick={handleInstallClick}
+              className="flex items-center gap-2 bg-gradient-to-r from-yellow-400 to-amber-500 text-blue-950 font-extrabold px-5 py-3 rounded-2xl shadow-[0_0_25px_rgba(250,204,21,0.6)] hover:scale-105 active:scale-95 transition-all cursor-pointer border border-white/40 animate-bounce"
+            >
+              <Download className="w-5 h-5 text-blue-950" />
+              <span>安裝 PHPLotto App</span>
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
     </div>
   );
 }
