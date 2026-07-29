@@ -98,18 +98,35 @@ export default function App() {
     };
   }, []);
 
-  // 🔔 透過 OneSignal 請求推播通知權限
+  // 🔔 透過 OneSignal 請求推播通知權限（已增強防錯與多版本相容）
   const handleSubscribePush = async () => {
     try {
       console.log('[OneSignal] 正在嘗試請求訂閱...');
       
       const OneSignalW = (window as any).OneSignal;
-      if (OneSignalW && OneSignalW.Slidedown) {
-        await OneSignalW.Slidedown.promptPush();
-      } else if (OneSignalW && OneSignalW.User) {
+      
+      if (!OneSignalW) {
+        throw new Error("OneSignal SDK 尚未載入完成，請重新整理頁面再試。");
+      }
+
+      // 嘗試方法 1: 透過新版 OneSignal.User API
+      if (OneSignalW.User && OneSignalW.User.pushSubscription) {
         await OneSignalW.User.pushSubscription.optIn();
-      } else {
-        await OneSignal.User.pushSubscription.optIn();
+      } 
+      // 嘗試方法 2: 透過 OneSignal.Slidedown (最穩定的自動彈窗)
+      else if (OneSignalW.Slidedown && typeof OneSignalW.Slidedown.promptPush === 'function') {
+        await OneSignalW.Slidedown.promptPush();
+      } 
+      // 嘗試方法 3: 透過舊版 OneSignal.registerForPushNotifications
+      else if (typeof OneSignalW.registerForPushNotifications === 'function') {
+        await OneSignalW.registerForPushNotifications();
+      } 
+      else {
+        // 如果都沒有，直接呼叫全域陣列
+        (window as any).OneSignal = (window as any).OneSignal || [];
+        (window as any).OneSignal.push(function(sal: any) {
+          sal.showSlidedownPrompt();
+        });
       }
 
       setIsSubscribed(true);
@@ -117,7 +134,7 @@ export default function App() {
       
     } catch (error: any) {
       console.error('[OneSignal] 訂閱失敗詳情:', error);
-      alert(`訂閱失敗: ${error?.message || error}`);
+      alert(`訂閱失敗: ${error?.message || error || '未知錯誤，請確認瀏覽器是否阻擋彈跳視窗'}`);
     }
   };
 
