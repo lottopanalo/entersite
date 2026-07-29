@@ -166,7 +166,7 @@ export default function App() {
         }
 
         window.location.href = targetUrl;
-      }, 3000);
+      }, 1200);
 
       return () => clearTimeout(timer);
     }
