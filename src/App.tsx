@@ -9,7 +9,8 @@ import {
   Sparkles, 
   ShieldCheck, 
   SignalHigh,
-  Download
+  Download,
+  Bell
 } from 'lucide-react';
 
 // Imported generated logo asset
@@ -29,6 +30,9 @@ export default function App() {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showInstallBtn, setShowInstallBtn] = useState<boolean>(false);
 
+  // 🔔 推播通知狀態
+  const [isSubscribed, setIsSubscribed] = useState<boolean>(false);
+
   // 🎯 主站與備用 API 清單
   const TARGET_DOMAINS = [
     'https://phplotto.ph',
@@ -37,16 +41,23 @@ export default function App() {
     'https://phplotto.com'
   ];
 
-  // 📥 監聽瀏覽器的 PWA 安裝事件
+  // 📥 監聽瀏覽器的 PWA 安裝事件與 Service Worker 註冊
   useEffect(() => {
     const handleBeforeInstallPrompt = (e: Event) => {
-      e.preventDefault(); // 阻止瀏覽器預設行為
-      setDeferredPrompt(e); // 儲存事件
-      setShowInstallBtn(true); // 顯示自訂安裝按鈕
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setShowInstallBtn(true);
       console.log('[PWA] 已成功捕捉到安裝事件，按鈕已啟用');
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    // 註冊 Service Worker
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js')
+        .then((reg) => console.log('[PWA] Service Worker 註冊成功:', reg.scope))
+        .catch((err) => console.error('[PWA] Service Worker 註冊失敗:', err));
+    }
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
@@ -63,13 +74,35 @@ export default function App() {
     setShowInstallBtn(false);
   };
 
+  // 🔔 請求推播通知權限
+  const handleSubscribePush = async () => {
+    if (!('Notification' in window)) {
+      alert('Your browser does not support push notifications.');
+      return;
+    }
+
+    const permission = await Notification.requestPermission();
+    if (permission === 'granted') {
+      setIsSubscribed(true);
+      alert('🎉 Push notifications enabled successfully!\nMaganda! Nakatanggap ka na ng mga abiso.');
+      
+      // 這裡未來可以向你的後端發送請求，將使用者的 PushSubscription 儲存起來
+      if ('serviceWorker' in navigator) {
+        const registration = await navigator.serviceWorker.ready;
+        // 範例：若有實作 VAPID 推播，可在此處建立 subscription
+        console.log('Notification permission granted:', registration);
+      }
+    } else {
+      alert('Notification permission was denied. You can enable it in your browser settings.');
+    }
+  };
+
   // 🚀 當進度條完成時，自動測試網域並跳轉到第一個健康的網址
   useEffect(() => {
     if (isCompleted) {
       const timer = setTimeout(async () => {
-        let targetUrl = TARGET_DOMAINS[0]; // 預設先用主站
+        let targetUrl = TARGET_DOMAINS[0];
 
-        // 依序測試清單中的網址，確保能通才跳轉
         for (const domain of TARGET_DOMAINS) {
           try {
             const controller = new AbortController();
@@ -83,16 +116,14 @@ export default function App() {
             
             clearTimeout(timeoutId);
             targetUrl = domain;
-            console.log(`[App] 探測成功，選擇可用網域: ${domain}`);
             break; 
           } catch (e) {
-            console.warn(`[App] 網域連線測試失敗，嘗試下一個: ${domain}`);
+            console.warn(`[App] 網域連線測試失敗: ${domain}`);
           }
         }
 
-        // 執行最終跳轉
         window.location.href = targetUrl;
-      }, 1200); // 延長停留在 100% 的時間（1.2 秒），給予 PWA 安裝與緩衝時間
+      }, 1200);
 
       return () => clearTimeout(timer);
     }
@@ -359,8 +390,23 @@ export default function App() {
 
       </main>
 
-      {/* 🌟 智慧安裝與引導按鈕區塊 */}
-      <div className="fixed bottom-6 right-6 z-50">
+      {/* 🌟 智慧安裝與推播通知按鈕區塊 (右下角固定) */}
+      <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-2 items-end">
+        
+        {/* 🔔 推播通知訂閱按鈕 */}
+        <button
+          onClick={handleSubscribePush}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl shadow-lg border font-bold text-xs transition-all cursor-pointer ${
+            isSubscribed 
+              ? 'bg-emerald-800/90 text-emerald-200 border-emerald-400/50' 
+              : 'bg-blue-900/90 text-yellow-300 border-yellow-400/50 hover:bg-blue-800'
+          }`}
+        >
+          <Bell className={`w-4 h-4 ${isSubscribed ? 'text-emerald-300 animate-bounce' : 'text-yellow-400'}`} />
+          <span>{isSubscribed ? '🔔 Notifications Enabled' : '🔔 Enable Push Alerts'}</span>
+        </button>
+
+        {/* 📲 安裝 App / 教學按鈕 */}
         {showInstallBtn ? (
           <button
             onClick={handleInstallClick}
