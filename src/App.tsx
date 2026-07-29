@@ -423,54 +423,79 @@ export default function App() {
 
       </main>
 
-      {/* 🌟 智慧安裝與推播通知按鈕區塊 (右下角固定) */}
-      <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-2 items-end">
-        
-        {/* 🔔 推播通知訂閱按鈕 */}
-        <button
-          onClick={handleSubscribePush}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl shadow-lg border font-bold text-xs transition-all cursor-pointer ${
-            isSubscribed 
-              ? 'bg-emerald-800/90 text-emerald-200 border-emerald-400/50' 
-              : 'bg-blue-900/90 text-yellow-300 border-yellow-400/50 hover:bg-blue-800'
-          }`}
+     {/* 🔥 吸引人的 CTA 與顯眼按鈕區塊 (置中顯示 - 英文/塔加祿語版) */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="w-full bg-gradient-to-b from-blue-900/90 to-blue-950/90 border border-yellow-400/40 rounded-3xl p-6 backdrop-blur-xl shadow-[0_0_30px_rgba(250,204,21,0.15)] my-6 text-center space-y-4"
         >
-          <Bell className={`w-4 h-4 ${isSubscribed ? 'text-emerald-300 animate-bounce' : 'text-yellow-400'}`} />
-          <span>{isSubscribed ? '🔔 Notifications Enabled' : '🔔 Enable Push Alerts'}</span>
-        </button>
+          {/* 圖示與吸引人標題 (英文 + Tagalog) */}
+          <div className="space-y-1">
+            <div className="flex justify-center mb-2">
+              <div className="p-3 bg-yellow-400/15 border border-yellow-400/40 rounded-2xl text-yellow-300">
+                <Bell className="w-6 h-6 animate-bounce" />
+              </div>
+            </div>
+            <h3 className="text-base sm:text-lg font-extrabold text-yellow-300 tracking-wide">
+              🎉 Huwag palampasin ang mga bagong update at premyo!
+            </h3>
+            <p className="text-xs text-blue-200/80">
+              Enable notifications & download the app for instant updates.<br />
+              <span className="italic text-yellow-200/90 font-medium">I-on ang notifications at i-download ang app para sa mga huling balita.</span>
+            </p>
+          </div>
 
-        {/* 📲 安裝 App / 教學按鈕 */}
-        {showInstallBtn ? (
-          <button
-            onClick={handleInstallClick}
-            className="flex items-center gap-2 bg-gradient-to-r from-yellow-400 to-amber-500 text-blue-950 font-extrabold px-5 py-3 rounded-2xl shadow-[0_0_25px_rgba(250,204,21,0.6)] hover:scale-105 active:scale-95 transition-all cursor-pointer border border-white/40 animate-bounce"
-          >
-            <Download className="w-5 h-5 text-blue-950" />
-            <span>NEW!! Download PHPLotto App</span>
-          </button>
-        ) : (
-          <button
-            onClick={() => {
-              alert(
-                "📲 PHPLotto App Installation Guide / Gabay sa Pag-install:\n\n" +
-                "【iPhone / iPad (iOS Safari)】\n" +
-                "1. Tap the 'Share' button at the bottom toolbar (📤).\n" +
-                "   (I-tap ang 'Share' button sa ibaba)\n\n" +
-                "2. Scroll down and tap 'Add to Home Screen' (➕).\n" +
-                "   (I-scroll pababa at piliin ang 'Add to Home Screen')\n\n" +
-                "3. Tap 'Add' at the top right to complete.\n" +
-                "   (I-tap ang 'Add' sa kanang itaas)\n\n" +
-                "【Android / Desktop】\n" +
-                "Tap the browser menu (⋮) and select 'Install app' or 'Add to Home screen'."
-              );
-            }}
-            className="flex items-center gap-2 bg-blue-900/90 text-yellow-300 border border-yellow-400/50 font-bold px-4 py-3 rounded-2xl shadow-xl hover:bg-blue-800 transition-all cursor-pointer text-xs"
-          >
-            <Download className="w-4 h-4 text-yellow-400" />
-            <span>📲 How to Install App?</span>
-          </button>
-        )}
-      </div>
+          {/* 顯眼的大按鈕群組 (英文 + Tagalog 雙語) */}
+          <div className="flex flex-col sm:flex-row gap-3 pt-2">
+            
+            {/* 🔔 訂閱通知按鈕 */}
+            <button
+              onClick={handleSubscribePush}
+              className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-2xl font-extrabold text-xs sm:text-sm shadow-lg transition-all cursor-pointer ${
+                isSubscribed 
+                  ? 'bg-emerald-600 text-white border border-emerald-400' 
+                  : 'bg-gradient-to-r from-amber-500 to-yellow-400 text-blue-950 border border-white/40 hover:scale-[1.02] active:scale-95 shadow-[0_0_20px_rgba(250,204,21,0.4)]'
+              }`}
+            >
+              <Bell className="w-4 h-4 text-blue-950" />
+              <span>{isSubscribed ? '✅ Notifications Enabled' : '🚀 Enable Notifications'}</span>
+            </button>
+
+            {/* 📥 下載/安裝 App 按鈕 */}
+            {showInstallBtn ? (
+              <button
+                onClick={handleInstallClick}
+                className="flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-2xl font-extrabold text-xs sm:text-sm bg-gradient-to-r from-blue-600 to-indigo-600 text-white border border-white/30 hover:scale-[1.02] active:scale-95 shadow-lg transition-all cursor-pointer animate-pulse"
+              >
+                <Download className="w-4 h-4 text-white" />
+                <span>📥 Install PHPLotto App</span>
+              </button>
+            ) : (
+              <button
+                onClick={() => {
+                  alert(
+                    "📲 PHPLotto App Installation Guide / Gabay sa Pag-install:\n\n" +
+                    "【iPhone / iPad (iOS Safari)】\n" +
+                    "1. Tap the 'Share' button at the bottom toolbar (📤).\n" +
+                    "   (I-tap ang 'Share' button sa ibaba)\n\n" +
+                    "2. Scroll down and tap 'Add to Home Screen' (➕).\n" +
+                    "   (I-scroll pababa at piliin ang 'Add to Home Screen')\n\n" +
+                    "3. Tap 'Add' at the top right to complete.\n" +
+                    "   (I-tap ang 'Add' sa kanang itaas)\n\n" +
+                    "【Android / Desktop】\n" +
+                    "Tap the browser menu (⋮) and select 'Install app' or 'Add to Home screen'."
+                  );
+                }}
+                className="flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-2xl font-bold text-xs sm:text-sm bg-blue-900/80 text-yellow-300 border border-yellow-400/50 hover:bg-blue-800 transition-all cursor-pointer shadow-lg"
+              >
+                <Download className="w-4 h-4 text-yellow-400" />
+                <span>📲 How to Install App?</span>
+              </button>
+            )}
+
+          </div>
+        </motion.div>
 
     </div>
   );
