@@ -183,7 +183,7 @@ export default function App() {
         }
 
         window.location.href = targetUrl;
-      }, 1200);
+      }, 300);
 
       return () => clearTimeout(timer);
     }
