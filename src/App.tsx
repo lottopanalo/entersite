@@ -359,25 +359,29 @@ export default function App() {
 
       </main>
 
-      {/* 🌟 浮動的 PWA 安裝按鈕（當瀏覽器觸發 beforeinstallprompt 時會自動顯示） */}
-      <AnimatePresence>
-        {showInstallBtn && (
-          <motion.div
-            initial={{ opacity: 0, y: 50, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 20, scale: 0.9 }}
-            className="fixed bottom-6 right-6 z-50"
-          >
-            <button
-              onClick={handleInstallClick}
-              className="flex items-center gap-2 bg-gradient-to-r from-yellow-400 to-amber-500 text-blue-950 font-extrabold px-5 py-3 rounded-2xl shadow-[0_0_25px_rgba(250,204,21,0.6)] hover:scale-105 active:scale-95 transition-all cursor-pointer border border-white/40 animate-bounce"
-            >
-              <Download className="w-5 h-5 text-blue-950" />
-              <span>NEW!!Download PHP Lotto App</span>
-            </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
+ {/* 🌟 智慧安裝與引導按鈕區塊 */}
+<div className="fixed bottom-6 right-6 z-50">
+  {showInstallBtn ? (
+    // 如果是支援自動安裝的瀏覽器 (如 Android Chrome)，直接顯示原生安裝按鈕
+    <button
+      onClick={handleInstallClick}
+      className="flex items-center gap-2 bg-gradient-to-r from-yellow-400 to-amber-500 text-blue-950 font-extrabold px-5 py-3 rounded-2xl shadow-[0_0_25px_rgba(250,204,21,0.6)] hover:scale-105 active:scale-95 transition-all cursor-pointer border border-white/40 animate-bounce"
+    >
+      <Download className="w-5 h-5 text-blue-950" />
+      <span>安裝 PHPLotto App</span>
+    </button>
+  ) : (
+    // 如果是 iOS 或未觸發自動事件的裝置，顯示手動教學引導按鈕
+    <button
+      onClick={() => {
+        alert("📲 PHPLotto App 手機安裝教學：\n\n【iPhone / iPad (iOS Safari)】\n1. 點擊下方工具列的「分享」按鈕 (正方形帶有向上箭頭 📤)。\n2. 在選單中向下滑動，選擇「加入主畫面 ➕」。\n3. 點擊右上角的「新增」即可完成安裝！\n\n【Android / 電腦】\n請點擊瀏覽器右上角選單 (⋮)，選擇「安裝應用程式」。");
+      }}
+      className="flex items-center gap-2 bg-blue-900/90 text-yellow-300 border border-yellow-400/50 font-bold px-4 py-3 rounded-2xl shadow-xl hover:bg-blue-800 transition-all cursor-pointer text-xs"
+    >
+      <Download className="w-4 h-4 text-yellow-400" />
+      <span>📲 如何安裝 App？</span>
+    </button>
+  )}
 
     </div>
   );
