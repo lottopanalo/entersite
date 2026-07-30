@@ -152,6 +152,8 @@ async function fetchAndBackup(originalRequest) {
 // ===========================================
 self.addEventListener('fetch', (event) => {
     if (!event.request.url.startsWith('http')) {
+self.addEventListener('fetch', (event) => {
+    if (!event.request.url.startsWith('http')) {
         return;
     }
 
@@ -159,23 +161,19 @@ self.addEventListener('fetch', (event) => {
     const isApiRequest = url.pathname.includes('/api/');
 
     if (isApiRequest) {
-        console.log(`[Service Worker] 攔截到 API 請求: ${event.request.url}`);
         event.respondWith(fetchAndBackup(event.request));
     } else {
-        // 非 API 請求交由預設快取或網路處理
+        // 非 API 請求正常放行，滿足 Chrome PWA 檢測需求
         event.respondWith(fetch(event.request));
     }
 });
 
 self.addEventListener('install', (event) => {
     self.skipWaiting();
-    console.log('[Service Worker] 安裝成功。');
 });
 
 self.addEventListener('activate', (event) => {
     event.waitUntil(clients.claim());
-    console.log('[Service Worker] 已啟用並掌控頁面。');
 });
 ```eof
 
-Your updated `sw.js` file is ready! Feel free to take a look and let me know if you'd like to make any edits.
