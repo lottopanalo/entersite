@@ -3,24 +3,19 @@ import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
 
-// ===========================================
-// Service Worker 註冊程式碼
-// ===========================================
+// 💡 必須明確註冊 Service Worker，PWA 安裝按鈕才會被 Chrome 喚醒！
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js')
-      .then(registration => {
-        console.log('Service Worker 註冊成功:', registration);
+      .then((registration) => {
+        console.log('[PWA] Service Worker 註冊成功:', registration.scope);
       })
-      .catch(error => {
-        console.error('Service Worker 註冊失敗:', error);
+      .catch((error) => {
+        console.error('[PWA] Service Worker 註冊失敗:', error);
       });
   });
 }
 
-// ===========================================
-// 您的 React 應用程式渲染邏輯 (只留這一個)
-// ===========================================
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />
