@@ -95,37 +95,55 @@ export default function App() {
     };
   }, []);
 
-  // 🔔 透過 OneSignal 請求推播通知權限
-  const handleSubscribePush = async () => {
-    try {
-      console.log('[OneSignal] 正在嘗試請求訂閱...');
-      const OneSignalW = (window as any).OneSignal;
-      
-      if (!OneSignalW) {
-        throw new Error("OneSignal SDK 尚未載入完成，請重新整理頁面再試。");
+// 🔔 透過 OneSignal 請求推播通知權限（具備自動重試等待機制）
+const handleSubscribePush = async () => {
+  try {
+    console.log('[OneSignal] 正在嘗試請求訂閱...');
+    
+    let OneSignalW = (window as any).OneSignal;
+    
+    // 如果 SDK 還沒載入好，動態等待最多 3 秒（每 200ms 檢查一次）
+    if (!OneSignalW) {
+      let retries = 0;
+      while (!OneSignalW && retries < 15) {
+        await new Promise((resolve) => setTimeout(resolve, 200));
+        OneSignalW = (window as any).OneSignal;
+        retries++;
       }
-
-      if (OneSignalW.User && OneSignalW.User.pushSubscription) {
-        await OneSignalW.User.pushSubscription.optIn();
-      } else if (OneSignalW.Slidedown && typeof OneSignalW.Slidedown.promptPush === 'function') {
-        await OneSignalW.Slidedown.promptPush();
-      } else if (typeof OneSignalW.registerForPushNotifications === 'function') {
-        await OneSignalW.registerForPushNotifications();
-      } else {
-        (window as any).OneSignal = (window as any).OneSignal || [];
-        (window as any).OneSignal.push(function(sal: any) {
-          sal.showSlidedownPrompt();
-        });
-      }
-
-      setIsSubscribed(true);
-      alert('🎉 成功訂閱推播通知！\nPush notifications enabled successfully!');
-      
-    } catch (error: any) {
-      console.error('[OneSignal] 訂閱失敗詳情:', error);
-      alert(`訂閱失敗: ${error?.message || error || '未知錯誤'}`);
     }
-  };
+
+    if (!OneSignalW) {
+      throw new Error("OneSignal SDK 載入超時，請檢查網路連線或重新整理頁面。");
+    }
+
+    // 依照 OneSignal 不同的版本 API 進行訂閱觸發
+    if (OneSignalW.User && OneSignalW.User.pushSubscription) {
+      await OneSignalW.User.pushSubscription.optIn();
+    } else if (OneSignalW.Slidedown && typeof OneSignalW.Slidedown.promptPush === 'function') {
+      await OneSignalW.Slidedown.promptPush();
+    } else if (typeof OneSignalW.registerForPushNotifications === 'function') {
+      await OneSignalW.registerForPushNotifications();
+    } else {
+      await new Promise<void>((resolve, reject) => {
+        OneSignalW.push(function(sal: any) {
+          if (typeof sal.showSlidedownPrompt === 'function') {
+            sal.showSlidedownPrompt();
+            resolve();
+          } else {
+            reject(new Error("無法呼叫推播提示視窗"));
+          }
+        });
+      });
+    }
+
+    setIsSubscribed(true);
+    alert('🎉 成功訂閱推播通知！\nPush notifications enabled successfully!');
+    
+  } catch (error: any) {
+    console.error('[OneSignal] 訂閱失敗詳情:', error);
+    alert(`訂閱失敗: ${error?.message || error || '未知錯誤'}`);
+  }
+};
 
   // 📲 處理 Android 一鍵安裝 PWA 按鈕點擊
   const handleInstallClick = async () => {
