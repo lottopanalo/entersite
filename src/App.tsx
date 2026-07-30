@@ -145,25 +145,25 @@ const handleSubscribePush = async () => {
   }
 };
 
-  // 📲 處理 Android 一鍵安裝 PWA 按鈕點擊
+  // 📲 Handle Android PWA install button click
   const handleInstallClick = async () => {
     if (!deferredPrompt) {
-      alert("目前瀏覽器尚未準備好安裝提示，或您已經安裝過此 App。如無法安裝，請至瀏覽器選單 (⋮) 點擊「加到主畫面」或「安裝應用程式」。");
+      alert("The installation prompt is not ready yet, or you have already installed this app. If you cannot install it, please tap the browser menu (⋮) and select 'Add to Home Screen' or 'Install App'.");
       return;
     }
 
-    // 顯示系統原生安裝提示框
+    // Show the native system installation prompt
     deferredPrompt.prompt();
     
-    // 等待用戶選擇
+    // Wait for the user's choice
     const { outcome } = await deferredPrompt.userChoice;
     if (outcome === 'accepted') {
-      console.log('使用者接受了安裝');
+      console.log('User accepted the install prompt');
     } else {
-      console.log('使用者取消了安裝');
+      console.log('User dismissed the install prompt');
     }
     
-    // 提示只能使用一次，用完需清空
+    // The prompt can only be used once, clear it after use
     setDeferredPrompt(null);
     setShowInstallBtn(false);
   };
