@@ -337,8 +337,8 @@ const handleSubscribePush = async () => {
                   <button
                     onClick={() => {
                       alert(
-                        "📲 安裝提示 / Installation Guide:\n\n" +
-                        "若未自動彈出安裝框，請點擊 Android Chrome 右上角選單 (⋮)，然後選擇「安裝應用程式」或「加到主畫面」。"
+                        "📲 Installation Guide:\n\n" +
+                        "If the installation prompt does not appear automatically, please tap the top-right menu (⋮) in Android Chrome and select 'Install app' or 'Add to Home Screen'"
                       );
                   }}
                   className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-2xl font-bold text-xs sm:text-sm bg-blue-900 text-yellow-300 border border-yellow-400/40 hover:bg-blue-800 transition-all cursor-pointer shadow-lg"
