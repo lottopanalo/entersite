@@ -331,7 +331,7 @@ const handleSubscribePush = async () => {
                     className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-2xl font-extrabold text-xs sm:text-sm bg-gradient-to-r from-[#84c1ff] to-blue-600 text-blue-950 border border-white/40 hover:scale-[1.02] active:scale-95 shadow-lg transition-all cursor-pointer animate-pulse"
                   >
                     <Download className="w-4 h-4 text-blue-950" />
-                    <span>📥 Install PHPLotto App (一鍵下載)</span>
+                    <span>📥 Install PHPLotto App </span>
                   </button>
                 ) : (
                   <button
