@@ -103,18 +103,18 @@ const handleSubscribePush = async () => {
     let OneSignalW = (window as any).OneSignal;
     
     // 如果 SDK 還沒載入好，動態等待最多 3 秒（每 200ms 檢查一次）
-    if (!OneSignalW) {
-      let retries = 0;
-      while (!OneSignalW && retries < 15) {
-        await new Promise((resolve) => setTimeout(resolve, 200));
-        OneSignalW = (window as any).OneSignal;
-        retries++;
-      }
-    }
+  if (!OneSignalW) {
+  let retries = 0;
+  while (!OneSignalW && retries < 30) { // 增加至 30 次 (約 6 秒)
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    OneSignalW = (window as any).OneSignal;
+    retries++;
+  }
+}
 
-    if (!OneSignalW) {
-      throw new Error("OneSignal SDK 載入超時，請檢查網路連線或重新整理頁面。");
-    }
+   if (!OneSignalW) {
+  throw new Error("OneSignal SDK loading timeout. Please check your network connection or refresh the page.");
+}
 
     // 依照 OneSignal 不同的版本 API 進行訂閱觸發
     if (OneSignalW.User && OneSignalW.User.pushSubscription) {
@@ -137,11 +137,11 @@ const handleSubscribePush = async () => {
     }
 
     setIsSubscribed(true);
-    alert('🎉 成功訂閱推播通知！\nPush notifications enabled successfully!');
+    alert('🎉 Push notifications enabled successfully!');
     
   } catch (error: any) {
     console.error('[OneSignal] 訂閱失敗詳情:', error);
-    alert(`訂閱失敗: ${error?.message || error || '未知錯誤'}`);
+    alert(`Subscription failed: Please check your network connection and try again.\n(Nabigo ang pag-subscribe: Mangyaring suriin ang iyong koneksyon sa internet.)`);
   }
 };
 
