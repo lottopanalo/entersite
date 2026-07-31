@@ -148,10 +148,8 @@ async function fetchAndBackup(originalRequest) {
 }
 
 // ===========================================
-// 5. Service Worker 核心事件監聽
+// 5. Service Worker 核心事件監聽 (已修正結構)
 // ===========================================
-self.addEventListener('fetch', (event) => {
-    if (!event.request.url.startsWith('http')) {
 self.addEventListener('fetch', (event) => {
     if (!event.request.url.startsWith('http')) {
         return;
@@ -175,5 +173,3 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
     event.waitUntil(clients.claim());
 });
-```eof
-
