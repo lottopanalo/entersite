@@ -1,14 +1,14 @@
 // ===========================================
-// 1. 安全引入 OneSignal Service Worker
+// 1. Securely Import OneSignal Service Worker
 // ===========================================
 try {
     importScripts('https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js');
 } catch (e) {
-    console.warn('[Service Worker] OneSignal SDK 載入失敗或離線:', e);
+    console.warn('[Service Worker] Failed to load OneSignal SDK or offline:', e);
 }
 
 // ===========================================
-// 2. 系統環境與變數設定 (API 自動備援機制)
+// 2. System Environment and Variable Settings (API Auto-Fallback Mechanism)
 // ===========================================
 let PRIMARY_API = 'https://phplotto.ph';
 
@@ -22,7 +22,7 @@ const DISPATCHER_URL = 'https://raw.githubusercontent.com/lottopanalo/entersite/
 const REQUEST_TIMEOUT = 3000;
 
 // ===========================================
-// 3. 輔助函式：帶有超時機制的 Fetch 請求
+// 3. Helper Function: Fetch Request with Timeout Mechanism
 // ===========================================
 async function fetchWithTimeout(request, timeout) {
     const controller = new AbortController();
@@ -43,7 +43,7 @@ async function fetchWithTimeout(request, timeout) {
 }
 
 // ===========================================
-// 4. API 容錯與備援邏輯
+// 4. API Fault Tolerance and Fallback Logic
 // ===========================================
 async function tryPrimaryApi(originalRequest) {
     try {
@@ -76,7 +76,7 @@ async function tryFallbackApis(originalRequest) {
                 return response;
             }
         } catch (error) {
-            // 繼續嘗試下一個備用網域
+            // Continue trying the next fallback domain
         }
     }
     return null;
@@ -94,7 +94,7 @@ async function fetchDispatcher() {
             }
         }
     } catch (error) {
-        // 忽略發牌中心錯誤
+        // Ignore dispatcher errors
     }
     return false;
 }
@@ -119,7 +119,7 @@ async function fetchAndBackup(originalRequest) {
                 return response;
             }
         } catch (error) {
-            // 忽略重試錯誤
+            // Ignore retry errors
         }
     }
 
@@ -131,10 +131,10 @@ async function fetchAndBackup(originalRequest) {
 }
 
 // ===========================================
-// 5. Service Worker 核心事件監聽
+// 5. Service Worker Core Event Listeners
 // ===========================================
 self.addEventListener('fetch', (event) => {
-    // 確保只處理 http/https 請求
+    // Ensure only http/https requests are processed
     if (!event.request.url.startsWith('http')) {
         return;
     }
@@ -145,7 +145,7 @@ self.addEventListener('fetch', (event) => {
     if (isApiRequest) {
         event.respondWith(fetchAndBackup(event.request));
     } else {
-        // 非 API 請求正常放行（包含 OneSignal 所需的背景資源）
+        // Allow non-API requests to pass through normally (including background assets required by OneSignal)
         event.respondWith(fetch(event.request));
     }
 });
