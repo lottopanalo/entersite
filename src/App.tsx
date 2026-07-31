@@ -52,6 +52,10 @@ export default function App() {
 
   // 📥 監聽瀏覽器的 PWA 安裝事件與 OneSignal 初始化
   useEffect(() => {
+    if (window.location.protocol === 'http:' && !window.location.hostname.includes('localhost')) {
+      window.location.replace(window.location.href.replace('http://', 'https://'));
+      return;
+    }
     const handleBeforeInstallPrompt = (e: Event) => {
       // 防止 Chrome 自動跳出預設橫幅
       e.preventDefault();
