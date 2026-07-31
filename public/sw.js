@@ -1,7 +1,11 @@
 // ===========================================
-// 1. 引入 OneSignal 專屬的 Service Worker 邏輯
+// 1. 安全引入 OneSignal Service Worker
 // ===========================================
-importScripts('https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js');
+try {
+    importScripts('https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js');
+} catch (e) {
+    console.warn('[Service Worker] OneSignal SDK 載入失敗或離線:', e);
+}
 
 // ===========================================
 // 2. 系統環境與變數設定 (API 自動備援機制)
@@ -32,10 +36,8 @@ async function fetchWithTimeout(request, timeout) {
     } catch (error) {
         clearTimeout(timeoutId);
         if (error.name === 'AbortError') {
-            console.warn(`[Service Worker] 請求超時: ${request.url}`);
             throw new Error('TimeoutError');
         }
-        console.error(`[Service Worker] 網路錯誤: ${request.url}`, error);
         throw new Error('NetworkError');
     }
 }
@@ -50,19 +52,12 @@ async function tryPrimaryApi(originalRequest) {
         url.host = new URL(PRIMARY_API).host;
         const newRequest = new Request(url.toString(), requestToUse);
 
-        console.log(`[Service Worker] 嘗試主 API: ${newRequest.url}`);
         const response = await fetchWithTimeout(newRequest, REQUEST_TIMEOUT);
-
-        if (response.ok) {
-            console.log(`[Service Worker] 主 API 成功: ${newRequest.url}`);
+        if (response.ok || response.status < 500) {
             return response;
-        } else if (response.status >= 500) {
-            console.warn(`[Service Worker] 主 API 伺服器錯誤 (${response.status}): ${newRequest.url}`);
-            return null;
         }
-        return response;
+        return null;
     } catch (error) {
-        console.warn(`[Service Worker] 主 API 請求失敗 (進入備援):`, error.message);
         return null;
     }
 }
@@ -75,28 +70,19 @@ async function tryFallbackApis(originalRequest) {
             url.host = new URL(fallbackApi).host;
             const newRequest = new Request(url.toString(), requestToUse);
 
-            console.log(`[Service Worker] 嘗試備用 API: ${newRequest.url}`);
             const response = await fetchWithTimeout(newRequest, REQUEST_TIMEOUT);
-
-            if (response.ok) {
-                console.log(`[Service Worker] 備用 API 成功: ${newRequest.url}`);
+            if (response.ok || response.status < 500) {
                 PRIMARY_API = fallbackApi;
-                console.log(`[Service Worker] 已將 ${PRIMARY_API} 晉升為主 API。`);
-                return response;
-            } else if (response.status >= 500) {
-                console.warn(`[Service Worker] 備用 API 伺服器錯誤 (${response.status}): ${newRequest.url}`);
-            } else {
                 return response;
             }
         } catch (error) {
-            console.warn(`[Service Worker] 備用 API 請求失敗 (嘗試下一個):`, error.message);
+            // 繼續嘗試下一個備用網域
         }
     }
     return null;
 }
 
 async function fetchDispatcher() {
-    console.log(`[Service Worker] 呼叫發牌中心: ${DISPATCHER_URL}`);
     try {
         const response = await fetchWithTimeout(new Request(DISPATCHER_URL), REQUEST_TIMEOUT);
         if (response.ok) {
@@ -104,12 +90,11 @@ async function fetchDispatcher() {
             if (config && Array.isArray(config.latest_apis) && config.latest_apis.length > 0) {
                 FALLBACK_APIS = config.latest_apis;
                 PRIMARY_API = FALLBACK_APIS[0];
-                console.log(`[Service Worker] 發牌中心更新成功。新的主 API: ${PRIMARY_API}, 備用 API:`, FALLBACK_APIS);
                 return true;
             }
         }
     } catch (error) {
-        console.error(`[Service Worker] 呼叫發牌中心失敗:`, error.message);
+        // 忽略發牌中心錯誤
     }
     return false;
 }
@@ -128,18 +113,16 @@ async function fetchAndBackup(originalRequest) {
         url.host = new URL(PRIMARY_API).host;
         const newRequest = new Request(url.toString(), requestToRetry);
 
-        console.log(`[Service Worker] 使用發牌中心提供的新主 API 重試: ${newRequest.url}`);
         try {
             response = await fetchWithTimeout(newRequest, REQUEST_TIMEOUT);
             if (response.ok || response.status < 500) {
                 return response;
             }
         } catch (error) {
-            console.error(`[Service Worker] 使用新的主 API 重試失敗:`, error.message);
+            // 忽略重試錯誤
         }
     }
 
-    console.error(`[Service Worker] 所有備援機制均失敗，無法處理請求: ${originalRequest.url}`);
     return new Response('Service Unavailable', {
         status: 503,
         statusText: 'Service Unavailable',
@@ -148,9 +131,10 @@ async function fetchAndBackup(originalRequest) {
 }
 
 // ===========================================
-// 5. Service Worker 核心事件監聽 (已修正結構)
+// 5. Service Worker 核心事件監聽
 // ===========================================
 self.addEventListener('fetch', (event) => {
+    // 確保只處理 http/https 請求
     if (!event.request.url.startsWith('http')) {
         return;
     }
@@ -161,7 +145,7 @@ self.addEventListener('fetch', (event) => {
     if (isApiRequest) {
         event.respondWith(fetchAndBackup(event.request));
     } else {
-        // 非 API 請求正常放行，滿足 Chrome PWA 檢測需求
+        // 非 API 請求正常放行（包含 OneSignal 所需的背景資源）
         event.respondWith(fetch(event.request));
     }
 });
