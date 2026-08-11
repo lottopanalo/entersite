@@ -72,10 +72,13 @@ export default function App() {
     // 避免重複初始化 OneSignal
     if (typeof window !== 'undefined' && !(window as any)._oneSignalInitialized) {
       (window as any)._oneSignalInitialized = true;
-
+      
       OneSignal.init({
         appId: "4df189d3-17e8-4314-8ee3-38791652df11",
         allowLocalhostAsSecureOrigin: true,
+        // 💡 加上這兩行明確指定 Worker 路徑
+        serviceWorkerPath: "OneSignalSDKWorker.js",
+        serviceWorkerUpdaterPath: "OneSignalSDKUpdaterWorker.js",
       }).then(async () => {
         console.log('[OneSignal] 初始化成功！');
         
