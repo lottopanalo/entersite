@@ -147,21 +147,6 @@ const handleSubscribePush = async () => {
       alert(`❌ Subscription failed reason:\n${error?.message || JSON.stringify(error)}`);
     }
   };
-    const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error("API execution timeout: Browser did not respond to permission request (Domain may not be registered or notifications are blocked)")), 5000)
-    );
-
-    // Race between subscription and timeout
-    await Promise.race([subscribePromise, timeoutPromise]);
-
-    setIsSubscribed(true);
-    alert('🎉 Push notifications enabled successfully!');
-    
-  } catch (error: any) {
-    console.error('[OneSignal] Subscription failed details:', error);
-    alert(`❌ Subscription failed reason:\n${error?.message || JSON.stringify(error)}`);
-  }
-};
 
   // 📲 Handle Android PWA install button click
   const handleInstallClick = async () => {
