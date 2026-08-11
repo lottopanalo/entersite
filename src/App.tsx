@@ -3,25 +3,24 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   Zap, 
   RefreshCw, 
-  Globe, 
   CheckCircle2, 
   Sparkles, 
   ShieldCheck, 
   SignalHigh,
   Download,
   Bell,
-  X
+  X,
+  Share,
+  PlusSquare
 } from 'lucide-react';
 
-// 引入 OneSignal 推播 SDK
+// Import OneSignal Push SDK
 import OneSignal from 'react-onesignal';
 
-// Imported generated logo asset
+// Imported logo asset
 import logoImg from './assets/images/my_logo.png';
 
-type LanguageMode = 'dual' | 'tl' | 'en';
-
-// 🎯 主站與備用 API 清單（移至元件外層，避免每次 Render 重新宣告）
+// Main and backup API endpoint list
 const TARGET_DOMAINS = [
   'https://phplotto.net',
   'https://phplotto.ph',
@@ -30,42 +29,55 @@ const TARGET_DOMAINS = [
 ];
 
 export default function App() {
-  const [progress, setProgress] = useState(0);
-  const [isCompleted, setIsCompleted] = useState(false);
-  const [langMode, setLangMode] = useState<LanguageMode>('dual');
+  const [progress, setProgress] = useState<number>(0);
+  const [isCompleted, setIsCompleted] = useState<boolean>(false);
   const [speedMultiplier, setSpeedMultiplier] = useState<number>(1);
   const [pingMs, setPingMs] = useState<number>(18);
   const [activeNode, setActiveNode] = useState<string>('Node MNL-04 (Fastest)');
 
-  // 控制訂閱視窗（Modal）是否顯示，預設進站就顯示 (true)
+  // Modal display states
   const [showModal, setShowModal] = useState<boolean>(true);
-  // 記錄視窗是否已經被關閉過，用來觸發後續的進度條
   const [hasStartedLoading, setHasStartedLoading] = useState<boolean>(false);
 
-  // PWA 安裝提示相關狀態
+  // PWA install prompt states
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showInstallBtn, setShowInstallBtn] = useState<boolean>(false);
 
-  // 🔔 推播通知狀態
+  // Push Notification state
   const [isSubscribed, setIsSubscribed] = useState<boolean>(false);
 
-  // 📥 監聽 HTTP 自動跳轉 HTTPS、PWA 安裝事件與 OneSignal 初始化
+  // iOS & Standalone detection states
+  const [isIOS, setIsIOS] = useState<boolean>(false);
+  const [isStandalone, setIsStandalone] = useState<boolean>(false);
+
+  // Initial detection and OneSignal setup
   useEffect(() => {
+    // 1. Detect HTTPS redirect
     if (window.location.protocol === 'http:' && !window.location.hostname.includes('localhost')) {
       window.location.replace(window.location.href.replace('http://', 'https://'));
       return;
     }
 
+    // 2. Detect iOS & Standalone mode
+    const userAgent = window.navigator.userAgent.toLowerCase();
+    const iosDevice = /iphone|ipad|ipod/.test(userAgent);
+    const standaloneMode = window.matchMedia('(display-mode: standalone)').matches 
+      || (window.navigator as any).standalone === true;
+
+    setIsIOS(iosDevice);
+    setIsStandalone(standaloneMode);
+
+    // 3. Listen for Android/Desktop PWA install prompt
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e);
       setShowInstallBtn(true);
-      console.log('[PWA] 已成功捕捉到安裝事件，一鍵安裝按鈕已啟用');
+      console.log('[PWA] Install prompt captured successfully.');
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
-    // 避免 React StrictMode 或重新載入時重複初始化 OneSignal
+    // 4. Initialize OneSignal
     if (typeof window !== 'undefined' && !(window as any)._oneSignalInitialized) {
       (window as any)._oneSignalInitialized = true;
       
@@ -75,10 +87,9 @@ export default function App() {
         serviceWorkerPath: "OneSignalSDKWorker.js",
         serviceWorkerUpdaterPath: "OneSignalSDKUpdaterWorker.js",
       }).then(async () => {
-        console.log('[OneSignal] 初始化成功！');
+        console.log('[OneSignal] Initialized successfully!');
         
         try {
-          // 檢查當前訂閱狀態
           if (OneSignal.User && OneSignal.User.pushSubscription) {
             const isOptedIn = OneSignal.User.pushSubscription.optedIn;
             if (isOptedIn) {
@@ -86,10 +97,10 @@ export default function App() {
             }
           }
         } catch (e) {
-          console.log('尚未訂閱或狀態檢查中');
+          console.log('[OneSignal] Checking subscription status...');
         }
       }).catch((err) => {
-        console.error('[OneSignal] 初始化失敗:', err);
+        console.error('[OneSignal] Initialization error:', err);
       });
     }
 
@@ -98,62 +109,57 @@ export default function App() {
     };
   }, []);
 
-  // 🔔 透過 OneSignal 請求推播通知權限
+  // Request Push Notification permission via OneSignal
   const handleSubscribePush = async () => {
-    console.log('[Push Debug] 觸發訂閱按鈕...');
+    console.log('[Push Debug] Triggering subscription...');
 
-    // 1. 檢查瀏覽器是否支援 Notification
     if (!('Notification' in window)) {
-      alert('❌ 您的瀏覽器不支援桌面通知 API。');
+      alert('❌ Your browser does not support web notifications.');
       return;
     }
 
-    // 2. 檢查原生瀏覽器權限狀態
     const currentPermission = Notification.permission;
-    console.log('[Push Debug] 當前 Notification.permission:', currentPermission);
+    console.log('[Push Debug] Current permission status:', currentPermission);
 
     if (currentPermission === 'denied') {
       alert(
-        '⚠️ 您的瀏覽器權限已被設定為「封鎖」！\n\n' +
-        '請點擊網址列左側的 🔒 鎖頭圖示，將「通知」改為「允許」或「重設權限」，並重新整理網頁。'
+        '⚠️ Notification permissions are blocked!\n\n' +
+        'Please click the lock icon next to the address bar, enable "Notifications", and refresh the page.'
       );
       return;
     }
 
     if (currentPermission === 'granted') {
       setIsSubscribed(true);
-      alert('✅ 您已經開啟過通知權限囉！');
+      alert('✅ Notifications are already enabled!');
       return;
     }
 
-    // 3. 直接使用 react-onesignal 套件 API 請求權限
     try {
       if (OneSignal.Notifications && typeof OneSignal.Notifications.requestPermission === 'function') {
         const accepted = await OneSignal.Notifications.requestPermission();
-        console.log('[Push Debug] 權限要求結果:', accepted);
+        console.log('[Push Debug] Permission result:', accepted);
         
         if (accepted) {
           setIsSubscribed(true);
-          alert('🎉 成功啟用推播通知！');
+          alert('🎉 Push notifications enabled successfully!');
         } else {
-          alert('⚠️ 您取消了推播通知請求。');
+          alert('⚠️ Notification request was canceled.');
         }
       } else {
-        // 備用方案：如果 SDK 未完全就緒，降級使用瀏覽器原生 API
-        console.warn('[Push Debug] 改用原生 API 觸發通知權限');
         const nativePermission = await Notification.requestPermission();
         if (nativePermission === 'granted') {
           setIsSubscribed(true);
-          alert('🎉 成功啟用推播通知！');
+          alert('🎉 Push notifications enabled successfully!');
         }
       }
     } catch (err: any) {
-      console.error('[Push Debug] 觸發訂閱發生例外:', err);
-      alert(`❌ 訂閱過程發生錯誤: ${err?.message || JSON.stringify(err)}`);
+      console.error('[Push Debug] Exception during subscription:', err);
+      alert(`❌ Subscription error: ${err?.message || JSON.stringify(err)}`);
     }
   };
 
-  // 📲 Handle Android PWA install button click
+  // Handle Android PWA install trigger
   const handleInstallClick = async () => {
     if (!deferredPrompt) {
       alert("The installation prompt is not ready yet, or you have already installed this app. If you cannot install it, please tap the browser menu (⋮) and select 'Add to Home Screen' or 'Install App'.");
@@ -173,13 +179,13 @@ export default function App() {
     setShowInstallBtn(false);
   };
 
-  // ❌ 關閉視窗並開始跑進度條與跳轉
+  // Close Modal & trigger loading sequence
   const handleCloseModal = () => {
     setShowModal(false);
     setHasStartedLoading(true);
   };
 
-  // 🚀 當進度條完成時，自動測試網域並跳轉
+  // Redirect upon connection completion
   useEffect(() => {
     if (isCompleted) {
       const timer = setTimeout(async () => {
@@ -200,7 +206,7 @@ export default function App() {
             targetUrl = domain;
             break; 
           } catch (e) {
-            console.warn(`[App] 網域連線測試失敗: ${domain}`);
+            console.warn(`[App] Domain connection test failed: ${domain}`);
           }
         }
 
@@ -211,7 +217,7 @@ export default function App() {
     }
   }, [isCompleted]);
 
-  // 模擬網路速度進度
+  // Simulate progress bar
   useEffect(() => {
     if (!hasStartedLoading || isCompleted) return;
 
@@ -253,17 +259,15 @@ export default function App() {
 
   const getSubStatusText = () => {
     if (progress < 30) {
-      return { tl: 'Inihahanda ang pag-scan ng mga linya...', en: 'Initializing route network scan...', zh: '正在初始化網路線路掃描...' };
+      return 'Initializing route network scan...';
     } else if (progress < 70) {
-      return { tl: 'Sinusuri ang latency ng pinakamabilis na server...', en: 'Testing server latency & stability...', zh: '正在測試最快伺服器的延遲與穩定度...' };
+      return 'Testing server latency & stability...';
     } else if (progress < 100) {
-      return { tl: 'Pinakamainam na ruta ay kinokonekta na...', en: 'Optimizing and establishing optimal route...', zh: '正在優化並建立最佳連線路徑...' };
+      return 'Optimizing and establishing optimal route...';
     } else {
-      return { tl: 'Nakakonekta na sa pinakamabilis na linya!', en: 'Successfully connected to the fastest line!', zh: '已成功連線至最快線路！' };
+      return 'Successfully connected to the fastest line!';
     }
   };
-
-  const statusSub = getSubStatusText();
 
   return (
     <div 
@@ -282,7 +286,7 @@ export default function App() {
         }}
       />
 
-      {/* 🌟 彈跳視窗 Modal */}
+      {/* 🌟 Interactive Modal */}
       <AnimatePresence>
         {showModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-blue-950/60 backdrop-blur-md">
@@ -307,50 +311,74 @@ export default function App() {
                   </div>
                 </div>
                 <h3 className="text-base sm:text-lg font-extrabold text-yellow-300 tracking-wide">
-                  🎉 Huwag palampasin ang mga bagong update at premyo!
+                  Never Miss Important Updates & Rewards!
                 </h3>
                 <p className="text-xs text-blue-100/90">
-                  Enable notifications & download the app for instant updates.<br />
-                  <span className="italic text-yellow-200 font-medium">I-on ang notifications at i-download ang app para sa mga huling balita.</span>
+                  Enable notifications or install our web app for instant updates and exclusive offers.
                 </p>
               </div>
 
+              {/* Modal Content Logic: iOS vs Android/Desktop */}
               <div className="flex flex-col gap-3 pt-2">
-                {/* 🔔 訂閱通知按鈕 */}
-                <button
-                  onClick={handleSubscribePush}
-                  className={`w-full flex items-center justify-center gap-2 py-3 px-4 rounded-2xl font-extrabold text-xs sm:text-sm shadow-lg transition-all cursor-pointer ${
-                    isSubscribed 
-                      ? 'bg-emerald-600 text-white border border-emerald-400' 
-                      : 'bg-gradient-to-r from-amber-400 to-yellow-400 text-blue-950 border border-white/60 hover:scale-[1.02] active:scale-95 shadow-[0_0_20px_rgba(250,204,21,0.5)]'
-                  }`}
-                >
-                  <Bell className="w-4 h-4 text-blue-950" />
-                  <span>{isSubscribed ? '✅ Notifications Enabled' : '🚀 Enable Notifications'}</span>
-                </button>
-
-                {/* 📥 一鍵安裝 PWA 按鈕 */}
-                {showInstallBtn ? (
-                  <button
-                    onClick={handleInstallClick}
-                    className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-2xl font-extrabold text-xs sm:text-sm bg-gradient-to-r from-[#84c1ff] to-blue-600 text-blue-950 border border-white/40 hover:scale-[1.02] active:scale-95 shadow-lg transition-all cursor-pointer animate-pulse"
-                  >
-                    <Download className="w-4 h-4 text-blue-950" />
-                    <span>📥 Install PHPLotto App </span>
-                  </button>
+                {isIOS && !isStandalone ? (
+                  /* 🍎 iOS Safari Guidance Card (Not yet installed to Home Screen) */
+                  <div className="bg-blue-900/90 border border-yellow-400/40 rounded-2xl p-4 text-left space-y-2.5 text-xs text-blue-100">
+                    <div className="flex items-center gap-2 text-yellow-300 font-bold border-b border-yellow-400/20 pb-2">
+                      <Share className="w-4 h-4 text-yellow-300 animate-pulse" />
+                      <span>iOS Setup Required for Push Notifications</span>
+                    </div>
+                    <ol className="list-decimal list-inside space-y-1.5 text-[11px] leading-relaxed">
+                      <li>
+                        Tap the <span className="font-bold text-yellow-300">Share</span> button <Share className="inline w-3.5 h-3.5 mx-0.5 text-yellow-300" /> at the bottom of Safari.
+                      </li>
+                      <li>
+                        Scroll down and select <span className="font-bold text-yellow-300">'Add to Home Screen'</span> <PlusSquare className="inline w-3.5 h-3.5 mx-0.5 text-yellow-300" />.
+                      </li>
+                      <li>
+                        Open the app from your Home Screen to enable push notifications.
+                      </li>
+                    </ol>
+                  </div>
                 ) : (
-                  <button
-                    onClick={() => {
-                      alert(
-                        "📲 Installation Guide:\n\n" +
-                        "If the installation prompt does not appear automatically, please tap the top-right menu (⋮) in Android Chrome and select 'Install app' or 'Add to Home Screen'"
-                      );
-                    }}
-                    className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-2xl font-bold text-xs sm:text-sm bg-blue-900 text-yellow-300 border border-yellow-400/40 hover:bg-blue-800 transition-all cursor-pointer shadow-lg"
-                  >
-                    <Download className="w-4 h-4 text-yellow-400" />
-                    <span>📲 How to Install App?</span>
-                  </button>
+                  /* 🚀 Android, Desktop, or iOS PWA Standalone Mode */
+                  <>
+                    {/* Push Notification Button */}
+                    <button
+                      onClick={handleSubscribePush}
+                      className={`w-full flex items-center justify-center gap-2 py-3 px-4 rounded-2xl font-extrabold text-xs sm:text-sm shadow-lg transition-all cursor-pointer ${
+                        isSubscribed 
+                          ? 'bg-emerald-600 text-white border border-emerald-400' 
+                          : 'bg-gradient-to-r from-amber-400 to-yellow-400 text-blue-950 border border-white/60 hover:scale-[1.02] active:scale-95 shadow-[0_0_20px_rgba(250,204,21,0.5)]'
+                      }`}
+                    >
+                      <Bell className="w-4 h-4 text-blue-950" />
+                      <span>{isSubscribed ? '✅ Notifications Enabled' : '🚀 Enable Notifications'}</span>
+                    </button>
+
+                    {/* App Install Button */}
+                    {showInstallBtn ? (
+                      <button
+                        onClick={handleInstallClick}
+                        className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-2xl font-extrabold text-xs sm:text-sm bg-gradient-to-r from-[#84c1ff] to-blue-600 text-blue-950 border border-white/40 hover:scale-[1.02] active:scale-95 shadow-lg transition-all cursor-pointer animate-pulse"
+                      >
+                        <Download className="w-4 h-4 text-blue-950" />
+                        <span>📥 Install PHPLotto App</span>
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          alert(
+                            "📲 Installation Guide:\n\n" +
+                            "If the installation prompt does not appear automatically, please open your browser menu (⋮) and select 'Add to Home Screen' or 'Install App'."
+                          );
+                        }}
+                        className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-2xl font-bold text-xs sm:text-sm bg-blue-900 text-yellow-300 border border-yellow-400/40 hover:bg-blue-800 transition-all cursor-pointer shadow-lg"
+                      >
+                        <Download className="w-4 h-4 text-yellow-400" />
+                        <span>📲 How to Install App?</span>
+                      </button>
+                    )}
+                  </>
                 )}
               </div>
 
@@ -358,14 +386,14 @@ export default function App() {
                 onClick={handleCloseModal}
                 className="text-[11px] text-blue-200 hover:text-yellow-300 underline pt-1 cursor-pointer font-medium"
               >
-                Patuloy sa site / Continue to site ➔
+                Continue to site ➔
               </button>
             </motion.div>
           </div>
         )}
       </AnimatePresence>
 
-      {/* 背景主畫面 */}
+      {/* Main Loading Card */}
       <main className="relative z-10 w-full max-w-md flex flex-col items-center text-center py-8">
         <div className="relative mb-12 group drop-shadow-[0_0_25px_rgba(255,255,255,0.4)]">
           <div className="absolute -inset-2 bg-gradient-to-r from-yellow-300 to-white rounded-3xl blur-md opacity-50 group-hover:opacity-80 transition duration-500 animate-pulse" />
@@ -414,55 +442,34 @@ export default function App() {
 
         <div className="w-full bg-blue-950/70 border border-white/30 rounded-2xl p-6 backdrop-blur-xl shadow-2xl relative overflow-hidden text-white">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-[2px] bg-gradient-to-r from-transparent via-yellow-300 to-transparent" />
-          <div className="space-y-4">
-            {(langMode === 'dual' || langMode === 'tl') && (
-              <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} className="space-y-1">
-                <div className="flex items-center justify-center gap-1.5 text-[11px] text-yellow-300 font-bold tracking-widest uppercase">
-                  <Globe className="w-3.5 h-3.5 text-yellow-300" />
-                  <span>TAGALOG</span>
-                </div>
-                <h2 className="text-[18px] font-medium text-white tracking-[0.02em] leading-relaxed drop-shadow">
-                  "Naghahanap ng pinakamabilis na linya para sa iyo..."
-                </h2>
-                <p className="text-xs text-blue-200">{statusSub.tl}</p>
-              </motion.div>
-            )}
-            {langMode === 'dual' && <div className="w-full h-[1px] bg-white/20 my-2" />}
-            {(langMode === 'dual' || langMode === 'en') && (
-              <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} className="space-y-1">
-                <div className="flex items-center justify-center gap-1.5 text-[11px] text-[#84c1ff] font-bold tracking-widest uppercase">
-                  <Sparkles className="w-3.5 h-3.5 text-yellow-300" />
-                  <span>ENGLISH</span>
-                </div>
-                <h3 className="text-[14px] font-normal text-blue-100 uppercase tracking-[0.15em] leading-relaxed">
-                  "Searching for the fastest line for you..."
-                </h3>
-                <p className="text-xs text-blue-200/80">{statusSub.en}</p>
-              </motion.div>
-            )}
+          <div className="space-y-3">
+            <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} className="space-y-1">
+              <div className="flex items-center justify-center gap-1.5 text-[11px] text-yellow-300 font-bold tracking-widest uppercase">
+                <Sparkles className="w-3.5 h-3.5 text-yellow-300" />
+                <span>Optimizing Connection</span>
+              </div>
+              <h2 className="text-[18px] font-medium text-white tracking-[0.02em] leading-relaxed drop-shadow">
+                "Searching for the fastest route for you..."
+              </h2>
+              <p className="text-xs text-blue-200">{getSubStatusText()}</p>
+            </motion.div>
           </div>
           <AnimatePresence>
             {isCompleted && (
               <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="mt-4 pt-3 border-t border-yellow-300/40 text-yellow-300 flex items-center justify-center gap-2 text-xs font-bold">
                 <CheckCircle2 className="w-4 h-4 text-yellow-300" />
-                <span>Ready! Line test completed. Redirecting...</span>
+                <span>Connection verified! Redirecting to secure route...</span>
               </motion.div>
             )}
           </AnimatePresence>
         </div>
 
+        {/* Controls Section */}
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3 text-xs text-white">
           <button onClick={handleReplay} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-900/80 border border-white/30 hover:border-yellow-300 text-white transition active:scale-95 cursor-pointer shadow-md">
             <RefreshCw className={`w-3.5 h-3.5 text-yellow-300 ${progress < 100 ? 'animate-spin' : ''}`} />
-            <span>Replay Loading</span>
+            <span>Replay Scan</span>
           </button>
-          <div className="flex items-center bg-blue-900/80 border border-white/30 rounded-lg p-0.5 shadow-md">
-            {(['dual', 'tl', 'en'] as LanguageMode[]).map((mode) => (
-              <button key={mode} onClick={() => setLangMode(mode)} className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition cursor-pointer uppercase ${langMode === mode ? 'bg-yellow-300 text-blue-950 shadow' : 'text-blue-200 hover:text-white'}`}>
-                {mode === 'dual' ? 'Dual' : mode === 'tl' ? 'Tagalog' : 'English'}
-              </button>
-            ))}
-          </div>
           <button onClick={() => setSpeedMultiplier(prev => prev === 1 ? 2.5 : prev === 2.5 ? 0.4 : 1)} className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-blue-900/80 border border-white/30 hover:border-yellow-300 text-white transition cursor-pointer font-medium shadow-md">
             <Zap className="w-3 h-3 text-yellow-300" />
             <span>Speed: {speedMultiplier === 1 ? '1x' : speedMultiplier === 2.5 ? 'Fast (2.5x)' : 'Slow (0.4x)'}</span>
