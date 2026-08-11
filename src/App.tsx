@@ -104,24 +104,25 @@ export default function App() {
 
 // 🔔 透過 OneSignal 請求推播通知權限（具備自動重試等待機制）
 const handleSubscribePush = async () => {
+  alert("🟢 [測試] 按鈕點擊成功，開始執行訂閱...");
   try {
-    console.log('[OneSignal] 正在嘗試請求訂閱...');
-    
     let OneSignalW = (window as any).OneSignal;
     
-    // 如果 SDK 還沒載入好，動態等待最多 3 秒（每 200ms 檢查一次）
-  if (!OneSignalW) {
-  let retries = 0;
-  while (!OneSignalW && retries < 30) { // 增加至 30 次 (約 6 秒)
-    await new Promise((resolve) => setTimeout(resolve, 200));
-    OneSignalW = (window as any).OneSignal;
-    retries++;
-  }
-}
+    // 如果 SDK 還沒載入好，動態等待
+    if (!OneSignalW) {
+      let retries = 0;
+      while (!OneSignalW && retries < 30) {
+        await new Promise((resolve) => setTimeout(resolve, 200));
+        OneSignalW = (window as any).OneSignal;
+        retries++;
+      }
+    }
 
    if (!OneSignalW) {
-  throw new Error("OneSignal SDK loading timeout. Please check your network connection or refresh the page.");
-}
+     throw new Error("OneSignal SDK loading timeout. Please check your network connection.");
+   }
+
+    alert("🟢 [測試] SDK 已載入，準備觸發 OneSignal 訂閱 API...");
 
     // 依照 OneSignal 不同的版本 API 進行訂閱觸發
     if (OneSignalW.User && OneSignalW.User.pushSubscription) {
@@ -148,7 +149,8 @@ const handleSubscribePush = async () => {
     
   } catch (error: any) {
     console.error('[OneSignal] 訂閱失敗詳情:', error);
-    alert(`Subscription failed: Please check your network connection and try again.\n(Nabigo ang pag-subscribe: Mangyaring suriin ang iyong koneksyon sa internet.)`);
+    // 💡 這裡把真實的錯誤訊息印出來，取代原本籠統的文字
+    alert(`❌ 訂閱報錯: ${error?.message || JSON.stringify(error)}`);
   }
 };
 
