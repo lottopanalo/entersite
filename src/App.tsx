@@ -113,8 +113,12 @@ export default function App() {
   const handleSubscribePush = async () => {
     console.log('[Push Debug] Triggering subscription...');
 
-    if (!('Notification' in window)) {
-      alert('❌ Your browser does not support web notifications.');
+    // If Notifications or ServiceWorkers are not supported in current browser environment
+    if (!('Notification' in window) || !('serviceWorker' in navigator)) {
+      alert(
+        '⚠️ Web notifications are not supported in your current browser mode.\n\n' +
+        'Please add this app to your Home Screen or install it first, then open it from your Home Screen to enable notifications.'
+      );
       return;
     }
 
@@ -313,7 +317,7 @@ export default function App() {
               </button>
 
               <div className="space-y-2 pt-1">
-                {/* 🏷️ Platform Logo Displayed Prominently at top */}
+                {/* 🏷️ Platform Logo */}
                 <div className="flex justify-center mb-2">
                   <div className="relative">
                     <img 
@@ -338,7 +342,7 @@ export default function App() {
               {/* Modal Content Logic: iOS vs Android/Desktop */}
               <div className="flex flex-col gap-3 pt-2">
                 {isIOS && !isStandalone ? (
-                  /* 🍎 iOS Safari Guidance Card (Not yet installed to Home Screen) */
+                  /* 🍎 iOS Safari Guidance Card */
                   <div className="bg-blue-900/90 border border-yellow-400/40 rounded-2xl p-4 text-left space-y-2.5 text-xs text-blue-100">
                     <div className="flex items-center gap-2 text-yellow-300 font-bold border-b border-yellow-400/20 pb-2">
                       <Share className="w-4 h-4 text-yellow-300 animate-pulse" />
@@ -359,20 +363,7 @@ export default function App() {
                 ) : (
                   /* 🚀 Android, Desktop, or iOS PWA Standalone Mode */
                   <>
-                    {/* Push Notification Button */}
-                    <button
-                      onClick={handleSubscribePush}
-                      className={`w-full flex items-center justify-center gap-2 py-3 px-4 rounded-2xl font-extrabold text-xs sm:text-sm shadow-lg transition-all cursor-pointer ${
-                        isSubscribed 
-                          ? 'bg-emerald-600 text-white border border-emerald-400' 
-                          : 'bg-gradient-to-r from-amber-400 to-yellow-400 text-blue-950 border border-white/60 hover:scale-[1.02] active:scale-95 shadow-[0_0_20px_rgba(250,204,21,0.5)]'
-                      }`}
-                    >
-                      <Bell className="w-4 h-4 text-blue-950" />
-                      <span>{isSubscribed ? '✅ Notifications Enabled' : '🚀 Enable Notifications'}</span>
-                    </button>
-
-                    {/* App Install Button */}
+                    {/* 1. App Install Button (First Priority) */}
                     {showInstallBtn ? (
                       <button
                         onClick={handleInstallClick}
@@ -386,12 +377,12 @@ export default function App() {
                         onClick={() => {
                           alert(
                             "📲 App Installation Guide:\n\n" +
-                            "🤖 Android (Chrome):\n" +
-                            "1. Tap the browser menu (⋮) at the top-right.\n" +
-                            "2. Select 'Install app' or 'Add to Home screen'.\n\n" +
                             "🍏 iOS (Safari):\n" +
                             "1. Tap the Share button at the bottom of Safari.\n" +
-                            "2. Scroll down and select 'Add to Home Screen'."
+                            "2. Scroll down and select 'Add to Home Screen'.\n\n" +
+                            "🤖 Android (Chrome):\n" +
+                            "1. Tap the browser menu (⋮) at the top-right.\n" +
+                            "2. Select 'Install app' or 'Add to Home screen'."
                           );
                         }}
                         className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-2xl font-bold text-xs sm:text-sm bg-blue-900 text-yellow-300 border border-yellow-400/40 hover:bg-blue-800 transition-all cursor-pointer shadow-lg"
@@ -400,6 +391,19 @@ export default function App() {
                         <span>📲 How to Install App?</span>
                       </button>
                     )}
+
+                    {/* 2. Push Notification Button (Second Priority) */}
+                    <button
+                      onClick={handleSubscribePush}
+                      className={`w-full flex items-center justify-center gap-2 py-3 px-4 rounded-2xl font-extrabold text-xs sm:text-sm shadow-lg transition-all cursor-pointer ${
+                        isSubscribed 
+                          ? 'bg-emerald-600 text-white border border-emerald-400' 
+                          : 'bg-gradient-to-r from-amber-400 to-yellow-400 text-blue-950 border border-white/60 hover:scale-[1.02] active:scale-95 shadow-[0_0_20px_rgba(250,204,21,0.5)]'
+                      }`}
+                    >
+                      <Bell className="w-4 h-4 text-blue-950" />
+                      <span>{isSubscribed ? '✅ Notifications Enabled' : '🚀 Enable Notifications'}</span>
+                    </button>
                   </>
                 )}
               </div>
