@@ -104,11 +104,10 @@ export default function App() {
 
 // 🔔 透過 OneSignal 請求推播通知權限（具備自動重試等待機制）
 const handleSubscribePush = async () => {
-  alert("🟢 [測試] 按鈕點擊成功，開始執行訂閱...");
+  alert("🟢 [Test] Button click successful, initiating subscription...");
   try {
     let OneSignalW = (window as any).OneSignal;
     
-    // 如果 SDK 還沒載入好，動態等待
     if (!OneSignalW) {
       let retries = 0;
       while (!OneSignalW && retries < 30) {
@@ -118,39 +117,38 @@ const handleSubscribePush = async () => {
       }
     }
 
-   if (!OneSignalW) {
-     throw new Error("OneSignal SDK loading timeout. Please check your network connection.");
-   }
-
-    alert("🟢 [測試] SDK 已載入，準備觸發 OneSignal 訂閱 API...");
-
-    // 依照 OneSignal 不同的版本 API 進行訂閱觸發
-    if (OneSignalW.User && OneSignalW.User.pushSubscription) {
-      await OneSignalW.User.pushSubscription.optIn();
-    } else if (OneSignalW.Slidedown && typeof OneSignalW.Slidedown.promptPush === 'function') {
-      await OneSignalW.Slidedown.promptPush();
-    } else if (typeof OneSignalW.registerForPushNotifications === 'function') {
-      await OneSignalW.registerForPushNotifications();
-    } else {
-      await new Promise<void>((resolve, reject) => {
-        OneSignalW.push(function(sal: any) {
-          if (typeof sal.showSlidedownPrompt === 'function') {
-            sal.showSlidedownPrompt();
-            resolve();
-          } else {
-            reject(new Error("無法呼叫推播提示視窗"));
-          }
-        });
-      });
+    if (!OneSignalW) {
+      throw new Error("OneSignal SDK loading timeout.");
     }
+
+    alert("🟢 [Test] Preparing to call API with a 5-second anti-hang timeout...");
+
+    // 💡 5-second timeout protection to prevent the browser from hanging silently
+    const subscribePromise = (async () => {
+      if (OneSignalW.Slidedown && typeof OneSignalW.Slidedown.promptPush === 'function') {
+        return await OneSignalW.Slidedown.promptPush({ slidedownOptions: { type: 'push' } });
+      } else if (OneSignalW.User && OneSignalW.User.pushSubscription) {
+        return await OneSignalW.User.pushSubscription.optIn();
+      } else if (typeof OneSignalW.registerForPushNotifications === 'function') {
+        return await OneSignalW.registerForPushNotifications();
+      } else {
+        throw new Error("No available push notification API method found");
+      }
+    })();
+
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error("API execution timeout: Browser did not respond to permission request (Domain may not be registered or notifications are blocked)")), 5000)
+    );
+
+    // Race between subscription and timeout
+    await Promise.race([subscribePromise, timeoutPromise]);
 
     setIsSubscribed(true);
     alert('🎉 Push notifications enabled successfully!');
     
   } catch (error: any) {
-    console.error('[OneSignal] 訂閱失敗詳情:', error);
-    // 💡 這裡把真實的錯誤訊息印出來，取代原本籠統的文字
-    alert(`❌ 訂閱報錯: ${error?.message || JSON.stringify(error)}`);
+    console.error('[OneSignal] Subscription failed details:', error);
+    alert(`❌ Subscription failed reason:\n${error?.message || JSON.stringify(error)}`);
   }
 };
 
