@@ -104,38 +104,49 @@ export default function App() {
 
 // 🔔 透過 OneSignal 請求推播通知權限（具備自動重試等待機制）
 const handleSubscribePush = async () => {
-  alert("🟢 [Test] Button click successful, initiating subscription...");
-  try {
-    let OneSignalW = (window as any).OneSignal;
-    
-    if (!OneSignalW) {
-      let retries = 0;
-      while (!OneSignalW && retries < 30) {
-        await new Promise((resolve) => setTimeout(resolve, 200));
-        OneSignalW = (window as any).OneSignal;
-        retries++;
+    try {
+      let OneSignalW = (window as any).OneSignal;
+      
+      if (!OneSignalW) {
+        let retries = 0;
+        while (!OneSignalW && retries < 30) {
+          await new Promise((resolve) => setTimeout(resolve, 200));
+          OneSignalW = (window as any).OneSignal;
+          retries++;
+        }
       }
-    }
 
-    if (!OneSignalW) {
-      throw new Error("OneSignal SDK loading timeout.");
-    }
-
-    alert("🟢 [Test] Preparing to call API with a 5-second anti-hang timeout...");
-
-    // 💡 5-second timeout protection to prevent the browser from hanging silently
-    const subscribePromise = (async () => {
-      if (OneSignalW.Slidedown && typeof OneSignalW.Slidedown.promptPush === 'function') {
-        return await OneSignalW.Slidedown.promptPush({ slidedownOptions: { type: 'push' } });
-      } else if (OneSignalW.User && OneSignalW.User.pushSubscription) {
-        return await OneSignalW.User.pushSubscription.optIn();
-      } else if (typeof OneSignalW.registerForPushNotifications === 'function') {
-        return await OneSignalW.registerForPushNotifications();
-      } else {
-        throw new Error("No available push notification API method found");
+      if (!OneSignalW) {
+        throw new Error("OneSignal SDK loading timeout.");
       }
-    })();
 
+      // 💡 5秒逾時保護
+      const subscribePromise = (async () => {
+        if (OneSignalW.Slidedown && typeof OneSignalW.Slidedown.promptPush === 'function') {
+          return await OneSignalW.Slidedown.promptPush({ slidedownOptions: { type: 'push' } });
+        } else if (OneSignalW.User && OneSignalW.User.pushSubscription) {
+          return await OneSignalW.User.pushSubscription.optIn();
+        } else if (typeof OneSignalW.registerForPushNotifications === 'function') {
+          return await OneSignalW.registerForPushNotifications();
+        } else {
+          throw new Error("No available push notification API method found");
+        }
+      })();
+
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error("API execution timeout: Browser did not respond to permission request (Domain may not be registered or notifications are blocked)")), 5000)
+      );
+
+      await Promise.race([subscribePromise, timeoutPromise]);
+
+      setIsSubscribed(true);
+      alert('🎉 Push notifications enabled successfully!');
+      
+    } catch (error: any) {
+      console.error('[OneSignal] Subscription failed details:', error);
+      alert(`❌ Subscription failed reason:\n${error?.message || JSON.stringify(error)}`);
+    }
+  };
     const timeoutPromise = new Promise((_, reject) => 
       setTimeout(() => reject(new Error("API execution timeout: Browser did not respond to permission request (Domain may not be registered or notifications are blocked)")), 5000)
     );
