@@ -103,51 +103,36 @@ export default function App() {
   }, []);
 
 // 🔔 透過 OneSignal 請求推播通知權限（具備自動重試等待機制）
-const handleSubscribePush = async () => {
+// 🔔 透過 OneSignal 請求推播通知權限
+  const handleSubscribePush = async () => {
     try {
-      let OneSignalW = (window as any).OneSignal;
-      
-      if (!OneSignalW) {
-        let retries = 0;
-        while (!OneSignalW && retries < 30) {
-          await new Promise((resolve) => setTimeout(resolve, 200));
-          OneSignalW = (window as any).OneSignal;
-          retries++;
-        }
+      // 確保模組已經載入
+      if (!OneSignal) {
+        throw new Error("OneSignal SDK 模組尚未載入");
       }
 
-      if (!OneSignalW) {
-        throw new Error("OneSignal SDK loading timeout.");
+      // 依照 React-OneSignal 的版本支援呼叫對應的訂閱視窗
+      if (OneSignal.Slidedown && typeof OneSignal.Slidedown.promptPush === 'function') {
+        await OneSignal.Slidedown.promptPush();
+      } else if (typeof (OneSignal as any).showSlidedownPrompt === 'function') {
+        // 相容較舊版本
+        await (OneSignal as any).showSlidedownPrompt();
+      } else if (OneSignal.User && OneSignal.User.pushSubscription) {
+        // 直接要求權限
+        await OneSignal.User.pushSubscription.optIn();
+      } else {
+        throw new Error("無法找到適用的推播訂閱 API (No API method found)");
       }
 
-      // 💡 5秒逾時保護
-      const subscribePromise = (async () => {
-        if (OneSignalW.Slidedown && typeof OneSignalW.Slidedown.promptPush === 'function') {
-          return await OneSignalW.Slidedown.promptPush({ slidedownOptions: { type: 'push' } });
-        } else if (OneSignalW.User && OneSignalW.User.pushSubscription) {
-          return await OneSignalW.User.pushSubscription.optIn();
-        } else if (typeof OneSignalW.registerForPushNotifications === 'function') {
-          return await OneSignalW.registerForPushNotifications();
-        } else {
-          throw new Error("No available push notification API method found");
-        }
-      })();
-
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error("API execution timeout: Browser did not respond to permission request (Domain may not be registered or notifications are blocked)")), 5000)
-      );
-
-      await Promise.race([subscribePromise, timeoutPromise]);
-
+      // 如果執行到這裡且沒報錯，代表使用者已處理完對話框
       setIsSubscribed(true);
       alert('🎉 Push notifications enabled successfully!');
       
     } catch (error: any) {
       console.error('[OneSignal] Subscription failed details:', error);
-      alert(`❌ Subscription failed reason:\n${error?.message || JSON.stringify(error)}`);
+      alert(`❌ Subscription failed:\n${error?.message || JSON.stringify(error)}`);
     }
   };
-
   // 📲 Handle Android PWA install button click
   const handleInstallClick = async () => {
     if (!deferredPrompt) {
