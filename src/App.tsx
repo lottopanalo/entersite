@@ -103,36 +103,65 @@ export default function App() {
   }, []);
 
 // 🔔 透過 OneSignal 請求推播通知權限（具備自動重試等待機制）
-// 🔔 透過 OneSignal 請求推播通知權限
-  const handleSubscribePush = async () => {
-    try {
-      // 確保模組已經載入
-      if (!OneSignal) {
-        throw new Error("OneSignal SDK 模組尚未載入");
-      }
+ const handleSubscribePush = async () => {
+  console.log('[Push Debug] 觸發訂閱按鈕...');
 
-      // 依照 React-OneSignal 的版本支援呼叫對應的訂閱視窗
-      if (OneSignal.Slidedown && typeof OneSignal.Slidedown.promptPush === 'function') {
-        await OneSignal.Slidedown.promptPush();
-      } else if (typeof (OneSignal as any).showSlidedownPrompt === 'function') {
-        // 相容較舊版本
-        await (OneSignal as any).showSlidedownPrompt();
-      } else if (OneSignal.User && OneSignal.User.pushSubscription) {
-        // 直接要求權限
-        await OneSignal.User.pushSubscription.optIn();
+  // 1. 檢查瀏覽器是否支援 Notification
+  if (!('Notification' in window)) {
+    alert('❌ 您的瀏覽器不支援桌面通知 API。');
+    return;
+  }
+
+  // 2. 檢查原生瀏覽器權限狀態
+  const currentPermission = Notification.permission;
+  console.log('[Push Debug] 當前 Notification.permission:', currentPermission);
+
+  if (currentPermission === 'denied') {
+    alert(
+      '⚠️ 您的瀏覽器權限已被設定為「封鎖」！\n\n' +
+      '請點擊網址列左側的 🔒 鎖頭圖示，將「通知」改為「允許」或「重設權限」，並重新整理網頁。'
+    );
+    return;
+  }
+
+  if (currentPermission === 'granted') {
+    setIsSubscribed(true);
+    alert('✅ 您已經開啟過通知權限囉！');
+    return;
+  }
+
+  // 3. 觸發 OneSignal / 原生權限請求
+  try {
+    window.OneSignalDeferred = window.OneSignalDeferred || [];
+    window.OneSignalDeferred.push(async (OneSignal: any) => {
+      console.log('[Push Debug] 進入 OneSignalDeferred 佇列，呼叫 SDK API...');
+
+      // OneSignal v16 標準 API
+      if (OneSignal.Notifications && typeof OneSignal.Notifications.requestPermission === 'function') {
+        const accepted = await OneSignal.Notifications.requestPermission();
+        console.log('[Push Debug] 權限要求結果:', accepted);
+        
+        if (accepted) {
+          setIsSubscribed(true);
+          alert('🎉 成功啟用推播通知！');
+        } else {
+          alert('⚠️ 您取消了推播通知請求。');
+        }
       } else {
-        throw new Error("無法找到適用的推播訂閱 API (No API method found)");
+        // 備用方案：如果 SDK 未完全初始化，直接呼叫瀏覽器原生彈窗
+        console.warn('[Push Debug] 找不到 OneSignal.Notifications API，改用原生 API 觸發');
+        const nativePermission = await Notification.requestPermission();
+        if (nativePermission === 'granted') {
+          setIsSubscribed(true);
+          alert('🎉 成功啟用推播通知！');
+        }
       }
-
-      // 如果執行到這裡且沒報錯，代表使用者已處理完對話框
-      setIsSubscribed(true);
-      alert('🎉 Push notifications enabled successfully!');
-      
-    } catch (error: any) {
-      console.error('[OneSignal] Subscription failed details:', error);
-      alert(`❌ Subscription failed:\n${error?.message || JSON.stringify(error)}`);
-    }
-  };
+    });
+  } catch (err: any) {
+    console.error('[Push Debug] 觸發訂閱發生例外:', err);
+    alert(`❌ 訂閱過程發生錯誤: ${err?.message || JSON.stringify(err)}`);
+  }
+};
   // 📲 Handle Android PWA install button click
   const handleInstallClick = async () => {
     if (!deferredPrompt) {
