@@ -162,7 +162,15 @@ export default function App() {
   // Handle Android PWA install trigger
   const handleInstallClick = async () => {
     if (!deferredPrompt) {
-      alert("The installation prompt is not ready yet, or you have already installed this app. If you cannot install it, please tap the browser menu (⋮) and select 'Add to Home Screen' or 'Install App'.");
+      alert(
+        "📲 App Installation Guide:\n\n" +
+        "🍏 iOS (Safari):\n" +
+        "1. Tap the Share button at the bottom of Safari.\n" +
+        "2. Scroll down and select 'Add to Home Screen'.\n\n" +
+        "🤖 Android (Chrome):\n" +
+        "1. Tap the browser menu (⋮) at the top-right.\n" +
+        "2. Select 'Install app' or 'Add to Home screen'."
+      );
       return;
     }
 
@@ -368,8 +376,13 @@ export default function App() {
                       <button
                         onClick={() => {
                           alert(
-                            "📲 Installation Guide:\n\n" +
-                            "If the installation prompt does not appear automatically, please open your browser menu (⋮) and select 'Add to Home Screen' or 'Install App'."
+                            "📲 App Installation Guide:\n\n" +
+                            "🤖 Android (Chrome):\n" +
+                            "1. Tap the browser menu (⋮) at the top-right.\n" +
+                            "2. Select 'Install app' or 'Add to Home screen'.
+                            "🍏 iOS (Safari):\n" +
+                            "1. Tap the Share button at the bottom of Safari.\n" +
+                            "2. Scroll down and select 'Add to Home Screen'.\n\n" +"
                           );
                         }}
                         className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-2xl font-bold text-xs sm:text-sm bg-blue-900 text-yellow-300 border border-yellow-400/40 hover:bg-blue-800 transition-all cursor-pointer shadow-lg"
