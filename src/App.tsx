@@ -74,7 +74,7 @@ export default function App() {
       (window as any)._oneSignalInitialized = true;
       
       OneSignal.init({
-        appId: "4df189d3-17e8-4314-8ee3-38791652df11",
+        appId: "aa84d6bc-c116-4612-97b0-c63794bb4a53",
         allowLocalhostAsSecureOrigin: true,
         // 💡 加上這兩行明確指定 Worker 路徑
         serviceWorkerPath: "OneSignalSDKWorker.js",
