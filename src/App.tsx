@@ -312,12 +312,21 @@ export default function App() {
                 <X className="w-5 h-5" />
               </button>
 
-              <div className="space-y-1 pt-2">
+              <div className="space-y-2 pt-1">
+                {/* 🏷️ Platform Logo Displayed Prominently at top */}
                 <div className="flex justify-center mb-2">
-                  <div className="p-3 bg-yellow-400/20 border border-yellow-400/40 rounded-2xl text-yellow-300">
-                    <Bell className="w-6 h-6 animate-bounce" />
+                  <div className="relative">
+                    <img 
+                      src={logoImg} 
+                      alt="Platform Logo" 
+                      className="w-16 h-16 rounded-2xl object-cover border-2 border-yellow-400/60 shadow-lg" 
+                    />
+                    <div className="absolute -bottom-1 -right-1 p-1.5 bg-yellow-400 text-blue-950 rounded-full shadow-md">
+                      <Bell className="w-3.5 h-3.5 animate-bounce" />
+                    </div>
                   </div>
                 </div>
+
                 <h3 className="text-base sm:text-lg font-extrabold text-yellow-300 tracking-wide">
                   Never Miss Important Updates & Rewards!
                 </h3>
@@ -379,10 +388,10 @@ export default function App() {
                             "📲 App Installation Guide:\n\n" +
                             "🤖 Android (Chrome):\n" +
                             "1. Tap the browser menu (⋮) at the top-right.\n" +
-                            "2. Select 'Install app' or 'Add to Home screen'.
+                            "2. Select 'Install app' or 'Add to Home screen'.\n\n" +
                             "🍏 iOS (Safari):\n" +
                             "1. Tap the Share button at the bottom of Safari.\n" +
-                            "2. Scroll down and select 'Add to Home Screen'.\n\n" +"
+                            "2. Scroll down and select 'Add to Home Screen'."
                           );
                         }}
                         className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-2xl font-bold text-xs sm:text-sm bg-blue-900 text-yellow-300 border border-yellow-400/40 hover:bg-blue-800 transition-all cursor-pointer shadow-lg"
