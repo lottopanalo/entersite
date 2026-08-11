@@ -44,8 +44,8 @@ export default function App() {
 
   // 🎯 主站與備用 API 清單
   const TARGET_DOMAINS = [
-    'https://phplotto.ph',
     'https://phplotto.net',
+    'https://phplotto.ph',
     'https://phplottos.com',
     'https://phplotto.com'
   ];
