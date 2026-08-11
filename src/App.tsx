@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
-  Wifi, 
   Zap, 
   RefreshCw, 
   Globe, 
@@ -21,6 +20,14 @@ import OneSignal from 'react-onesignal';
 import logoImg from './assets/images/my_logo.png';
 
 type LanguageMode = 'dual' | 'tl' | 'en';
+
+// 🎯 主站與備用 API 清單（移至元件外層，避免每次 Render 重新宣告）
+const TARGET_DOMAINS = [
+  'https://phplotto.net',
+  'https://phplotto.ph',
+  'https://phplottos.com',
+  'https://phplotto.com'
+];
 
 export default function App() {
   const [progress, setProgress] = useState(0);
@@ -42,24 +49,15 @@ export default function App() {
   // 🔔 推播通知狀態
   const [isSubscribed, setIsSubscribed] = useState<boolean>(false);
 
-  // 🎯 主站與備用 API 清單
-  const TARGET_DOMAINS = [
-    'https://phplotto.net',
-    'https://phplotto.ph',
-    'https://phplottos.com',
-    'https://phplotto.com'
-  ];
-
-  // 📥 監聽瀏覽器的 PWA 安裝事件與 OneSignal 初始化
+  // 📥 監聽 HTTP 自動跳轉 HTTPS、PWA 安裝事件與 OneSignal 初始化
   useEffect(() => {
     if (window.location.protocol === 'http:' && !window.location.hostname.includes('localhost')) {
       window.location.replace(window.location.href.replace('http://', 'https://'));
       return;
     }
+
     const handleBeforeInstallPrompt = (e: Event) => {
-      // 防止 Chrome 自動跳出預設橫幅
       e.preventDefault();
-      // 儲存事件物件供後續按鈕觸發
       setDeferredPrompt(e);
       setShowInstallBtn(true);
       console.log('[PWA] 已成功捕捉到安裝事件，一鍵安裝按鈕已啟用');
@@ -67,22 +65,20 @@ export default function App() {
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
-    // 💡 注意：此處不再額外註冊 /sw.js，避免與 OneSignalSDKWorker.js 發生衝突
-
-    // 避免重複初始化 OneSignal
+    // 避免 React StrictMode 或重新載入時重複初始化 OneSignal
     if (typeof window !== 'undefined' && !(window as any)._oneSignalInitialized) {
       (window as any)._oneSignalInitialized = true;
       
       OneSignal.init({
         appId: "aa84d6bc-c116-4612-97b0-c63794bb4a53",
         allowLocalhostAsSecureOrigin: true,
-        // 💡 加上這兩行明確指定 Worker 路徑
         serviceWorkerPath: "OneSignalSDKWorker.js",
         serviceWorkerUpdaterPath: "OneSignalSDKUpdaterWorker.js",
       }).then(async () => {
         console.log('[OneSignal] 初始化成功！');
         
         try {
+          // 檢查當前訂閱狀態
           if (OneSignal.User && OneSignal.User.pushSubscription) {
             const isOptedIn = OneSignal.User.pushSubscription.optedIn;
             if (isOptedIn) {
@@ -102,41 +98,36 @@ export default function App() {
     };
   }, []);
 
-// 🔔 透過 OneSignal 請求推播通知權限（具備自動重試等待機制）
- const handleSubscribePush = async () => {
-  console.log('[Push Debug] 觸發訂閱按鈕...');
+  // 🔔 透過 OneSignal 請求推播通知權限
+  const handleSubscribePush = async () => {
+    console.log('[Push Debug] 觸發訂閱按鈕...');
 
-  // 1. 檢查瀏覽器是否支援 Notification
-  if (!('Notification' in window)) {
-    alert('❌ 您的瀏覽器不支援桌面通知 API。');
-    return;
-  }
+    // 1. 檢查瀏覽器是否支援 Notification
+    if (!('Notification' in window)) {
+      alert('❌ 您的瀏覽器不支援桌面通知 API。');
+      return;
+    }
 
-  // 2. 檢查原生瀏覽器權限狀態
-  const currentPermission = Notification.permission;
-  console.log('[Push Debug] 當前 Notification.permission:', currentPermission);
+    // 2. 檢查原生瀏覽器權限狀態
+    const currentPermission = Notification.permission;
+    console.log('[Push Debug] 當前 Notification.permission:', currentPermission);
 
-  if (currentPermission === 'denied') {
-    alert(
-      '⚠️ 您的瀏覽器權限已被設定為「封鎖」！\n\n' +
-      '請點擊網址列左側的 🔒 鎖頭圖示，將「通知」改為「允許」或「重設權限」，並重新整理網頁。'
-    );
-    return;
-  }
+    if (currentPermission === 'denied') {
+      alert(
+        '⚠️ 您的瀏覽器權限已被設定為「封鎖」！\n\n' +
+        '請點擊網址列左側的 🔒 鎖頭圖示，將「通知」改為「允許」或「重設權限」，並重新整理網頁。'
+      );
+      return;
+    }
 
-  if (currentPermission === 'granted') {
-    setIsSubscribed(true);
-    alert('✅ 您已經開啟過通知權限囉！');
-    return;
-  }
+    if (currentPermission === 'granted') {
+      setIsSubscribed(true);
+      alert('✅ 您已經開啟過通知權限囉！');
+      return;
+    }
 
-  // 3. 觸發 OneSignal / 原生權限請求
-  try {
-    window.OneSignalDeferred = window.OneSignalDeferred || [];
-    window.OneSignalDeferred.push(async (OneSignal: any) => {
-      console.log('[Push Debug] 進入 OneSignalDeferred 佇列，呼叫 SDK API...');
-
-      // OneSignal v16 標準 API
+    // 3. 直接使用 react-onesignal 套件 API 請求權限
+    try {
       if (OneSignal.Notifications && typeof OneSignal.Notifications.requestPermission === 'function') {
         const accepted = await OneSignal.Notifications.requestPermission();
         console.log('[Push Debug] 權限要求結果:', accepted);
@@ -148,20 +139,20 @@ export default function App() {
           alert('⚠️ 您取消了推播通知請求。');
         }
       } else {
-        // 備用方案：如果 SDK 未完全初始化，直接呼叫瀏覽器原生彈窗
-        console.warn('[Push Debug] 找不到 OneSignal.Notifications API，改用原生 API 觸發');
+        // 備用方案：如果 SDK 未完全就緒，降級使用瀏覽器原生 API
+        console.warn('[Push Debug] 改用原生 API 觸發通知權限');
         const nativePermission = await Notification.requestPermission();
         if (nativePermission === 'granted') {
           setIsSubscribed(true);
           alert('🎉 成功啟用推播通知！');
         }
       }
-    });
-  } catch (err: any) {
-    console.error('[Push Debug] 觸發訂閱發生例外:', err);
-    alert(`❌ 訂閱過程發生錯誤: ${err?.message || JSON.stringify(err)}`);
-  }
-};
+    } catch (err: any) {
+      console.error('[Push Debug] 觸發訂閱發生例外:', err);
+      alert(`❌ 訂閱過程發生錯誤: ${err?.message || JSON.stringify(err)}`);
+    }
+  };
+
   // 📲 Handle Android PWA install button click
   const handleInstallClick = async () => {
     if (!deferredPrompt) {
@@ -169,10 +160,8 @@ export default function App() {
       return;
     }
 
-    // Show the native system installation prompt
     deferredPrompt.prompt();
     
-    // Wait for the user's choice
     const { outcome } = await deferredPrompt.userChoice;
     if (outcome === 'accepted') {
       console.log('User accepted the install prompt');
@@ -180,7 +169,6 @@ export default function App() {
       console.log('User dismissed the install prompt');
     }
     
-    // The prompt can only be used once, clear it after use
     setDeferredPrompt(null);
     setShowInstallBtn(false);
   };
@@ -294,7 +282,7 @@ export default function App() {
         }}
       />
 
-      {/* 🌟 彈跳視窗 Modal (一進站預設顯示) */}
+      {/* 🌟 彈跳視窗 Modal */}
       <AnimatePresence>
         {showModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-blue-950/60 backdrop-blur-md">
@@ -341,7 +329,7 @@ export default function App() {
                   <span>{isSubscribed ? '✅ Notifications Enabled' : '🚀 Enable Notifications'}</span>
                 </button>
 
-                {/* 📥 一鍵安裝 PWA 按鈕 (只有當系統捕捉到 beforeinstallprompt 時才會顯示) */}
+                {/* 📥 一鍵安裝 PWA 按鈕 */}
                 {showInstallBtn ? (
                   <button
                     onClick={handleInstallClick}
@@ -357,23 +345,23 @@ export default function App() {
                         "📲 Installation Guide:\n\n" +
                         "If the installation prompt does not appear automatically, please tap the top-right menu (⋮) in Android Chrome and select 'Install app' or 'Add to Home Screen'"
                       );
-                  }}
-                  className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-2xl font-bold text-xs sm:text-sm bg-blue-900 text-yellow-300 border border-yellow-400/40 hover:bg-blue-800 transition-all cursor-pointer shadow-lg"
+                    }}
+                    className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-2xl font-bold text-xs sm:text-sm bg-blue-900 text-yellow-300 border border-yellow-400/40 hover:bg-blue-800 transition-all cursor-pointer shadow-lg"
                   >
                     <Download className="w-4 h-4 text-yellow-400" />
-                  <span>📲 How to Install App?</span>
+                    <span>📲 How to Install App?</span>
                   </button>
                 )}
               </div>
 
               <button 
-                  onClick={handleCloseModal}
-                  className="text-[11px] text-blue-200 hover:text-yellow-300 underline pt-1 cursor-pointer font-medium"
+                onClick={handleCloseModal}
+                className="text-[11px] text-blue-200 hover:text-yellow-300 underline pt-1 cursor-pointer font-medium"
               >
                 Patuloy sa site / Continue to site ➔
-            </button>
-          </motion.div>
-        </div>
+              </button>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
 
@@ -486,6 +474,6 @@ export default function App() {
           <span>Secure Connection Established • 256-bit Node Verification</span>
         </div>
       </main>
-  </div>
+    </div>
   );
 }
